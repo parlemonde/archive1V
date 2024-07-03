@@ -43,7 +43,7 @@ async function archivePage(dirPath: string, page: Page, ressources: Record<strin
     visitedPages[pathName] = true;
     logger.info(`Archiving ${villageName}, phase ${phase}, page: "/${pathName}"`);
     await sleep(2000);
-    await page.goto(`${process.env.URL_TO_ARCHIVE}/${pathName}`, { waitUntil: 'networkidle0' });
+    await page.goto(`${process.env.URL_TO_ARCHIVE}/${pathName}`, { waitUntil: 'domcontentloaded' });
     /**
      * Gère la navigation entre les différentes phases d'un village.
      * Ce bloc est exécuté uniquement pour la page d'accueil de chaque phase.
@@ -53,7 +53,7 @@ async function archivePage(dirPath: string, page: Page, ressources: Record<strin
      */
     if (pathName === '' && phase >= 1 && phase <= 3) {
       await sleep(4000);
-      await page.reload({ waitUntil: 'networkidle0' });
+      await page.reload({ waitUntil: 'domcontentloaded' });
       await page.click(`${SELECTORS.PHASE_BUTTONS}(${phase})`);
       await sleep(500);
     }
