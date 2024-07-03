@@ -14,13 +14,13 @@ async function gotoWithRetry(page: Page, url: string, maxAttempts = 3): Promise<
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       await page.goto(url, { 
-        waitUntil: 'networkidle2',  // Less strict than 'networkidle0'
+        waitUntil: 'domcontentloaded', 
         timeout: 60000  // Increased timeout to 60 seconds
       });
       return;
     } catch (error) {
       if (attempt === maxAttempts) throw error;
-      logger.info(`Navigation attempt ${attempt} failed, retrying in 10 seconds...`);
+      logger.info(`Navigation attempt ${attempt} failed, retrying in 30 seconds...`);
       await sleep(30000);  // Wait 30 seconds before retrying
     }
   }
