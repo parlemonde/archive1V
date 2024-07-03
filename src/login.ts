@@ -39,12 +39,12 @@ export async function login(page: Page) {
   await page.type('#password', password);
 
   try {
-    logger.startLoading('Logging in');
+    logger.info('Logging in');
     await Promise.all([page.click('button[type="submit"]'), page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 10000 })]);
-    logger.stopLoading();
+    // logger.stopLoading();
     logger.success('Logged in!');
   } catch (e) {
-    logger.stopLoading();
+    // logger.stopLoading();
     logger.warn('Error logging in... Username or password invalid!');
     logger.eraseLastRows(5);
     await login(page);

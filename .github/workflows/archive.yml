@@ -13,7 +13,6 @@ jobs:
 
     # Setup URL do archive
     env:
-      # URL_TO_ARCHIVE: https://1v-staging.parlemonde.org
       URL_TO_ARCHIVE: ${{ vars.URL_TO_ARCHIVE }}
 
     steps:
@@ -29,7 +28,7 @@ jobs:
       - name: Enable Corepack
         run: corepack enable
 
-      # Setup NodeJS 
+      # Setup dependencies 
       - run: yarn  
 
       # Configure AWS credentials
@@ -40,8 +39,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: eu-west-3
 
-      
-
+      # Setup Year to archive
       - name: Set YEAR variable
         run: |
           if [ -n "${{ github.event.client_payload.year }}" ]; then
@@ -50,7 +48,6 @@ jobs:
             echo "YEAR=${{ vars.YEAR }}" >> $GITHUB_ENV
           fi
   
-      
       # Archive
       - run: yarn start 
         env:

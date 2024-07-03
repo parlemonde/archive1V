@@ -17,7 +17,7 @@ const SELECTORS = {
  * @throws {Error} Si une erreur survient pendant la récupération du nombre de villages.
  */
 export async function getVillageCount(page: Page): Promise<number> {
-  logger.startLoading('Getting villages');
+  logger.info('Getting villages');
 
   try {
     await page.goto(`${process.env.URL_TO_ARCHIVE}`, { waitUntil: 'networkidle0' });
@@ -29,10 +29,10 @@ export async function getVillageCount(page: Page): Promise<number> {
     const count = await page.evaluate(({SELECTORS}) => {
       return document.querySelectorAll(SELECTORS.VILLAGE_OPTION).length;
     }, {SELECTORS});
-    logger.stopLoading();
+    // logger.stopLoading();
     return count;
   } catch (e) {
-    logger.stopLoading();
+    // logger.stopLoading();
     logger.error(e);
     return 0;
   }

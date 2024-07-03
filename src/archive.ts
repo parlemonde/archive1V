@@ -148,8 +148,7 @@ export async function archiveWebsite() {
   logger.info(`==> YEAR : ${process.env.YEAR ?? ''}`);
   logger.info(`==> ADMIN_USERNAME : ${process.env.ADMIN_USERNAME ?? ''}`);
   logger.info(`==> URL_TO_ARCHIVE : ${process.env.URL_TO_ARCHIVE ?? ''}`);
-  logger.info(`==> S3_ACCESS_KEY : ${process.env.S3_ACCESS_KEY ?? ''}`);
-  logger.info(`==> S3_BUCKET_NAME : ${process.env.S3_BUCKET_NAME ?? ''}`);
+
   
   let resources: Record<string, string> = {};
   try {
