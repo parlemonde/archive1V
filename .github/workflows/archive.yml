@@ -1,0 +1,57 @@
+name: Archive
+
+on:
+  repository_dispatch:
+    types: [run_archive]
+
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+
+    # Setup URL do archive
+    env:
+      # URL_TO_ARCHIVE: https://1v-staging.parlemonde.org
+      URL_TO_ARCHIVE: ${{ vars.URL_TO_ARCHIVE }}
+
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+
+      # Setup Node JS 20 
+      - name: Setup Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '20.x'
+
+      # Configure AWS credentials
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-west-3
+
+      # Setup NodeJS 
+      - run: yarn install  
+
+      - name: Set YEAR variable
+        run: |
+          if [ -n "${{ github.event.client_payload.year }}" ]; then
+            echo "YEAR=${{ github.event.client_payload.year }}" >> $GITHUB_ENV
+          else
+            echo "YEAR=${{ vars.YEAR }}" >> $GITHUB_ENV
+          fi
+  
+      
+      # Archive
+      - run: yarn start 
+        env:
+          ADMIN_USERNAME: ${{ secrets.ADMIN_USERNAME }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+
+      # Deploy
+      - run: yarn deploy
+        env:
+          S3_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          S3_SECRET_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          S3_BUCKET_NAME: ${{ vars.S3_BUCKET_NAME }}

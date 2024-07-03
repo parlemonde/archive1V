@@ -13,6 +13,13 @@ const s3Client = new S3Client({
   },
 });
 
+/**
+ * Téléverse un fichier vers S3.
+ * @param filepath - Chemin du fichier dans le bucket S3.
+ * @param file - Contenu du fichier à téléverser.
+ * @param contentType - Type MIME du fichier.
+ * @throws {Error} Si une erreur survient pendant le téléversement.
+ */
 async function uploadS3File(filepath: string, file: Buffer | fs.ReadStream, contentType: string): Promise<void> {
   const command = new PutObjectCommand({
     Bucket: process.env.S3_BUCKET_NAME,
@@ -28,6 +35,10 @@ async function uploadS3File(filepath: string, file: Buffer | fs.ReadStream, cont
   }
 }
 
+/**
+ * Téléverse récursivement tous les fichiers d'un répertoire vers S3.
+ * @param dirPath - Chemin du répertoire local à téléverser.
+ */
 export async function upload(dirPath: string) {
   const uploadDir = async (currentPath: string) => {
     for (const name of fs.readdirSync(currentPath)) {
@@ -44,6 +55,6 @@ export async function upload(dirPath: string) {
   logger.startLoading(`Uploading archive to S3, to access it from the browser!`);
   await uploadDir(dirPath);
   logger.stopLoading();
-  const url = process.env.USE_MINIO ? `http://localhost:5000/api` : `https://1v.parlemonde.org/api`;
+  const url = process.env.USE_MINIO ? `http://localhost:5000/api` : `${process.env.URL_TO_ARCHIVE}/api`;
   logger.success(`Archive uploaded! Available at: ${url}${dirPath.slice(12)}`);
 }
