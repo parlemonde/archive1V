@@ -1,8 +1,12 @@
 name: Archive
 
 # Manual trigger
-on: workflow_dispatch
-
+# on: workflow_dispatch
+on:
+  create:
+    tags:
+      - '*'
+      
 jobs:
   archive:
     runs-on: ubuntu-latest
