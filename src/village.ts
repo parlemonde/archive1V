@@ -10,6 +10,37 @@ const SELECTORS = {
   CONFIRM_BUTTON: 'div.MuiDialog-root button.MuiButton-containedSecondary',
 };
 
+async function gotoWithRetry(page: Page, url: string, maxAttempts = 3): Promise<void> {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      await page.goto(url, { 
+        waitUntil: 'networkidle2',  // Less strict than 'networkidle0'
+        timeout: 60000  // Increased timeout to 60 seconds
+      });
+      return;
+    } catch (error) {
+      if (attempt === maxAttempts) throw error;
+      logger.info(`Navigation attempt ${attempt} failed, retrying in 10 seconds...`);
+      await sleep(30000);  // Wait 30 seconds before retrying
+    }
+  }
+}
+
+
+async function waitForSelectorWithRetry(page: Page, selector: string, maxAttempts = 3): Promise<void> {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      await page.waitForSelector(selector, { visible: true, timeout: 10000 });
+      return;
+    } catch (error) {
+      if (attempt === maxAttempts) throw error;
+      logger.info(`Selector ${selector} not found on attempt ${attempt}, retrying...`);
+      await sleep(30000);
+    }
+  }
+}
+
+
 /**
  * Obtient le nombre de villages disponibles sur le site.
  * @param page - L'objet Page de Puppeteer.
@@ -20,36 +51,32 @@ export async function getVillageCount(page: Page): Promise<number> {
   logger.info('Getting villages');
 
   try {
-    await page.goto(`${process.env.URL_TO_ARCHIVE}`, { waitUntil: 'networkidle0' });
-    await sleep(500);
+    await gotoWithRetry(page, `${process.env.URL_TO_ARCHIVE}`);
+    await sleep(5000);  // Wait for any potential post-load scripts
+
+    // Wait for and click the village button
+    await waitForSelectorWithRetry(page, SELECTORS.VILLAGE_BUTTON);
     await page.click(SELECTORS.VILLAGE_BUTTON);
-    await page.waitForSelector(SELECTORS.VILLAGE_SELECT, { timeout: 5000 });
+
+    // Wait for and click the village select
+    await waitForSelectorWithRetry(page, SELECTORS.VILLAGE_SELECT);
     await page.click(SELECTORS.VILLAGE_SELECT);
-    await page.waitForSelector(SELECTORS.VILLAGE_OPTION, { timeout: 5000 });
+
+    // Wait for village options to appear
+    await waitForSelectorWithRetry(page, SELECTORS.VILLAGE_OPTION);
+
+    // Count the villages
     const count = await page.evaluate(({SELECTORS}) => {
       return document.querySelectorAll(SELECTORS.VILLAGE_OPTION).length;
     }, {SELECTORS});
-    // logger.stopLoading();
+    logger.info(`Found ${count} villages`);
     return count;
   } catch (e) {
-    // logger.stopLoading();
-    logger.info(e);
+    logger.info(`Error getting village count: ${e}`);
     return 0;
   }
 }
 
-async function waitForSelectorWithRetry(page: Page, selector: string, maxAttempts = 3) {
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    try {
-      await page.waitForSelector(selector, { timeout: 60000 });
-      return;
-    } catch (error) {
-      if (attempt === maxAttempts) throw error;
-      logger.info(`Attempt ${attempt} failed, retrying...`);
-      await sleep(60000); 
-    }
-  }
-}
 
 /**
  * Sélectionne un village spécifique sur le site.
