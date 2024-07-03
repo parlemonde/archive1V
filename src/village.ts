@@ -33,7 +33,7 @@ export async function getVillageCount(page: Page): Promise<number> {
     return count;
   } catch (e) {
     // logger.stopLoading();
-    logger.error(e);
+    logger.info(e);
     return 0;
   }
 }

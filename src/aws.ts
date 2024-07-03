@@ -7,6 +7,7 @@ import path from 'path';
 import { logger } from './logger';
 
 const s3Client = new S3Client({
+  region: 'eu-west-3',
   credentials: {
     accessKeyId: process.env.S3_ACCESS_KEY ?? '',
     secretAccessKey: process.env.S3_SECRET_KEY ?? '',
@@ -22,7 +23,7 @@ const s3Client = new S3Client({
  */
 async function uploadS3File(filepath: string, file: Buffer | fs.ReadStream, contentType: string): Promise<void> {
   const command = new PutObjectCommand({
-    Bucket: process.env.S3_BUCKET_NAME,
+    Bucket: `${process.env.S3_BUCKET_NAME ?? ''}`,
     Key: filepath,
     Body: file,
     ContentType: contentType,
@@ -55,6 +56,6 @@ export async function upload(dirPath: string) {
   logger.startLoading(`Uploading archive to S3, to access it from the browser!`);
   await uploadDir(dirPath);
   logger.stopLoading();
-  const url = process.env.USE_MINIO ? `http://localhost:5000/api` : `${process.env.URL_TO_ARCHIVE}/api`;
-  logger.success(`Archive uploaded! Available at: ${url}${dirPath.slice(12)}`);
+  const url = `${process.env.URL_TO_ARCHIVE}/archives/${dirPath.split('/').pop()}`;
+  logger.success(`Archive uploaded! Available at: ${url}`);
 }

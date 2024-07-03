@@ -144,11 +144,8 @@ async function archivePage(dirPath: string, page: Page, ressources: Record<strin
  */
 export async function archiveWebsite() {
   logger.infoBold('======= Archiving 1Village =======');
-
   logger.info(`==> YEAR : ${process.env.YEAR ?? ''}`);
-  logger.info(`==> ADMIN_USERNAME : ${process.env.ADMIN_USERNAME ?? ''}`);
   logger.info(`==> URL_TO_ARCHIVE : ${process.env.URL_TO_ARCHIVE ?? ''}`);
-
   
   let resources: Record<string, string> = {};
   try {
