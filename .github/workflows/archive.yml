@@ -1,8 +1,7 @@
 name: Archive
 
-on:
-  repository_dispatch:
-    types: [run_archive]
+# Manual trigger
+on: workflow_dispatch
 
 jobs:
   archive:
