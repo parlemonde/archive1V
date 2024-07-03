@@ -89,7 +89,7 @@ export async function selectVillage(page: Page, index: number) {
   logger.info('Selecting village');
 
   try {
-    await page.goto(`${process.env.URL_TO_ARCHIVE}`, { waitUntil: 'networkidle0' });
+    await page.goto(`${process.env.URL_TO_ARCHIVE}`, { waitUntil: 'domcontentloaded' });
     await sleep(2000);
 
     // Vérifier et cliquer sur le bouton pour ouvrir le menu déroulant
