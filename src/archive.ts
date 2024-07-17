@@ -3,7 +3,7 @@ import type { Page } from 'puppeteer';
 import puppeteer from 'puppeteer';
 
 import { handleAllCssFiles } from './css';
-import { generateIndex, promptYear } from './generateIndex';
+import { generateIndex } from './generateIndex';
 import { exportHTML } from './html';
 import { logger } from './logger';
 import { login } from './login';
@@ -12,39 +12,51 @@ import { autoScroll } from './scroll';
 import { sleep } from './sleep';
 import { getVillageCount, selectVillage } from './village';
 
+const SELECTORS = {
+  PHASE_BUTTONS: '#__next > div > div:nth-child(3) > div:nth-child(2) > div:nth-child(1) > div > div:nth-child',
+  WORLD_MAP: '#__next > div > div:nth-child(3) > div:nth-child(2) > div.app-content__card.with-shadow > div:nth-child(1)',
+  MOBILE_VIEW: '#__next > div > div:nth-child(2)',
+};
+
+const PHASES = [1, 2, 3];
+
+
+/**
+ * Archive une page spécifique du site web.
+ * @param dirPath - Chemin du répertoire où les fichiers archivés seront sauvegardés.
+ * @param page - L'objet Page de Puppeteer.
+ * @param ressources - Un objet contenant les ressources à archiver.
+ * @param villageName - Le nom du village en cours d'archivage.
+ * @param phase - La phase actuelle de l'archivage.
+ */
 async function archivePage(dirPath: string, page: Page, ressources: Record<string, string>, villageName: string, phase: number) {
   const index = `index-${villageName
     .toLowerCase()
     .replace(/\s/gim, '-')
-    .replace(/[–|-]+/gim, '-')}-phase-${phase + 1}`;
+    .replace(/[–|-]+/gim, '-')}-phase-${phase}`;
   const visitedPages: Record<string, boolean> = {};
 
-  const visit = async (pathName: string = '') => {
+  const visit = async (pathName: string = ''): Promise<void> => {
     if (visitedPages[pathName]) {
       return;
     }
     visitedPages[pathName] = true;
-    logger.startLoading(`Archiving ${villageName}, phase ${phase}, page: "/${pathName}"`);
+    logger.info(`Archiving ${villageName}, phase ${phase}, page: "/${pathName}"`);
     await sleep(2000);
-    await page.goto(`https://1v.parlemonde.org/${pathName}`, { waitUntil: 'networkidle0' });
-    if (pathName === '' && phase === 0) {
+    await page.goto(`${process.env.URL_TO_ARCHIVE}/${pathName}`, { waitUntil: 'domcontentloaded' });
+    /**
+     * Gère la navigation entre les différentes phases d'un village.
+     * Ce bloc est exécuté uniquement pour la page d'accueil de chaque phase.
+     *
+     * @param pathName - Le chemin de la page actuelle (vide pour la page d'accueil).
+     * @param phase - La phase actuelle (1, 2 ou 3).
+     */
+    if (pathName === '' && phase >= 1 && phase <= 3) {
       await sleep(4000);
-      await page.reload({ waitUntil: 'networkidle0' });
-      await page.click('#__next > div > main > div > div.app-content__sub-header > div > div:nth-child(1)');
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      await page.click(`${SELECTORS.PHASE_BUTTONS}(${phase})`);
       await sleep(500);
     }
-    if (pathName === '' && phase === 1) {
-      await sleep(4000);
-      await page.reload({ waitUntil: 'networkidle0' });
-      await page.click('#__next > div > main > div > div.app-content__sub-header > div > div:nth-child(2)');
-      await sleep(500);
-    } // index for phase 2
-    if (pathName === '' && phase === 2) {
-      await sleep(4000);
-      await page.reload({ waitUntil: 'networkidle0' });
-      await page.click('#__next > div > main > div > div.app-content__sub-header > div > div:nth-child(3)');
-      await sleep(500);
-    } // index for phase 3
     await autoScroll(page);
 
     // Fix missing CSS rules.
@@ -57,26 +69,26 @@ async function archivePage(dirPath: string, page: Page, ressources: Record<strin
     });
 
     // Remove world map
-    await page.evaluate(() => {
-      try {
-        const $map = document.querySelector('#__next > div > main > div > div.app-content__card.with-shadow > div:nth-child(1)');
+    try {
+      await page.evaluate(({SELECTORS}) => {
+        const $map = document.querySelector(SELECTORS.WORLD_MAP);
         if (!$map) {
           return;
         }
         $map.parentNode?.removeChild($map);
-      } catch (err) {
-        //
-      }
-    });
+      }, {SELECTORS});
+    } catch (err) {
+      logger.error(err);
+    }
 
     // Update index phase buttons
-    await page.evaluate((villageName) => {
-      try {
-        for (let i = 1; i < 4; i++) {
-          const path = `#__next > div > main > div > div.app-content__sub-header > div > div:nth-child(${i})`;
-          const $button = document.querySelector(path);
+    try {
+      await page.evaluate(({villageName, SELECTORS, PHASES}) => {
+        PHASES.forEach((phase) => {
+          const buttonSelector = `${SELECTORS.PHASE_BUTTONS}(${phase})`;
+          const $button = document.querySelector(buttonSelector);
           if (!$button) {
-            continue;
+            return;
           }
           const newButton = document.createElement('a');
           newButton.setAttribute('style', $button.getAttribute('style') || '');
@@ -85,25 +97,38 @@ async function archivePage(dirPath: string, page: Page, ressources: Record<strin
             `/index-${villageName
               .toLowerCase()
               .replace(/\s/gim, '-')
-              .replace(/[–|-]+/gim, '-')}-phase-${i}`,
+              .replace(/[–|-]+/gim, '-')}-phase-${phase}`,
           );
           newButton.innerHTML = $button.innerHTML;
           $button.parentNode?.replaceChild(newButton, $button);
+        });
+      }, {villageName, SELECTORS, PHASES});
+    } catch (e) {
+      logger.error(`Error updating index phase buttons: ${e}`);
+    }
+    
+    // Remove mobile view
+    try {
+      await page.evaluate(({SELECTORS}) => {
+        const $mobile = document.querySelector(SELECTORS.MOBILE_VIEW);
+        if ($mobile) {
+          $mobile.parentNode?.removeChild($mobile);
         }
-      } catch (e) {
-        //
-      }
-    }, villageName);
+      }, {SELECTORS});
+    } catch (err) {
+      logger.error(`Error removing mobile view:${err}`);
+    }
 
     // Save page
     const html = await page.evaluate(() => document.documentElement.outerHTML);
     if (html === '<html><head><style></style></head><body>Too many requests, please try again later.</body></html>') {
+      logger.info(`Too many requests for "/${pathName}". Retrying after delay...`);
+      visitedPages[pathName] = false; // Reset pour permettre une nouvelle tentative
       await sleep(5000);
-      visit(pathName);
-      return;
+      return visit(pathName);
     }
     const nextPaths = await exportHTML(dirPath, pathName, html, ressources, index);
-    logger.stopLoading();
+    logger.info("End");
     for (const nextPath of nextPaths) {
       await visit(nextPath);
     }
@@ -113,8 +138,15 @@ async function archivePage(dirPath: string, page: Page, ressources: Record<strin
   logger.success(`${villageName} archived.`);
 }
 
+/**
+ * Fonction principale pour archiver l'ensemble du site web 1Village.
+ * Cette fonction initialise le navigateur, se connecte, et archive chaque village et phase.
+ */
 export async function archiveWebsite() {
   logger.infoBold('======= Archiving 1Village =======');
+  logger.info(`==> YEAR : ${process.env.YEAR ?? ''}`);
+  logger.info(`==> URL_TO_ARCHIVE : ${process.env.URL_TO_ARCHIVE ?? ''}`);
+  
   let resources: Record<string, string> = {};
   try {
     try {
@@ -124,7 +156,7 @@ export async function archiveWebsite() {
       logger.error(e);
     }
     const browser = await puppeteer.launch({
-      headless: false,
+      headless: true,
       args: [`--window-size=1440,2000`],
       defaultViewport: {
         width: 1440,
@@ -134,7 +166,7 @@ export async function archiveWebsite() {
     const page = await browser.newPage();
     await page.setCacheEnabled(false);
 
-    const year = await promptYear(); // '2022-2023'
+    const year = process.env.YEAR ?? '';
     const dirPath = `archive/api/archives/${year.replace(/\//gim, '-')}`;
     await fs.ensureDir(dirPath);
     await fs.ensureDir(`${dirPath}/ressources`);
@@ -150,38 +182,16 @@ export async function archiveWebsite() {
 
     page.on('response', onPageResponse(dirPath, resources));
 
-    // --- If you want to archive a specific village because the auto list loop is not working. ---
-    // const villageName = 'Village monde Belgique – Russie';
-    // await page.setCookie({ name: 'village-id', value: '6', domain: '1v.parlemonde.org' });
-    // await archivePage(dirPath, page, ressources, villageName, 0);
-    // await archivePage(dirPath, page, ressources, villageName, 1);
-    // await archivePage(dirPath, page, ressources, villageName, 2);
-
     const villages: string[] = [];
     for (let i = 0; i < villageCount; i++) {
       const villageName = await selectVillage(page, i + 1);
+      logger.info(villageName);
       villages.push(villageName);
-      await sleep(20000);
-      await archivePage(dirPath, page, resources, villageName, 0);
-      await sleep(20000);
-      await archivePage(dirPath, page, resources, villageName, 1);
-      await sleep(20000);
-      await archivePage(dirPath, page, resources, villageName, 2);
+      for (const phase of PHASES) {
+        await sleep(20000);
+        await archivePage(dirPath, page, resources, villageName, phase)
+      }
     }
-
-    // --- If some villages have already been archived, we can skip them and add them by hand. ---
-    // const villages = [
-    //   'Village monde France - Albanie',
-    //   'Village monde France - Canada',
-    //   'Village monde France - Liban',
-    //   'Village monde France - Espagne',
-    //   'Village monde France - Maroc',
-    //   'Village monde France - Roumanie',
-    //   'Village monde Rwanda - Tunisie',
-    //   'Village monde France - Serbie',
-    //   'Village monde Égypte - Géorgie',
-    //   'Village monde Djibouti - Grèce',
-    // ];
 
     await handleAllCssFiles(resources, dirPath);
     await generateIndex(villages, year, dirPath);

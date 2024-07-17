@@ -4,6 +4,10 @@ import { parse } from 'node-html-parser';
 
 import { logger } from './logger';
 
+/**
+ * Supprime tous les scripts d'un élément HTML.
+ * @param el - L'élément HTML à nettoyer.
+ */
 function stripScripts(el: HTMLElement) {
   const scripts = [...el.querySelectorAll('script'), ...el.querySelectorAll("link[as='script']")];
   for (const script of scripts) {
@@ -11,6 +15,11 @@ function stripScripts(el: HTMLElement) {
   }
 }
 
+/**
+ * Met à jour les sources des images dans un élément HTML.
+ * @param el - L'élément HTML contenant les images.
+ * @param ressources - Un objet contenant les correspondances entre URLs et chemins locaux.
+ */
 function updateImages(el: HTMLElement, ressources: Record<string, string>) {
   const images = el.querySelectorAll('img');
   for (const image of images) {
@@ -23,6 +32,11 @@ function updateImages(el: HTMLElement, ressources: Record<string, string>) {
   }
 }
 
+/**
+ * Met à jour les liens CSS dans un élément HTML.
+ * @param el - L'élément HTML contenant les liens CSS.
+ * @param ressources - Un objet contenant les correspondances entre URLs et chemins locaux.
+ */
 function updateCssLinks(el: HTMLElement, ressources: Record<string, string>) {
   const links = [...el.querySelectorAll("link[rel='stylesheet']"), ...el.querySelectorAll("link[as='style']")];
   for (const link of links) {
@@ -34,6 +48,11 @@ function updateCssLinks(el: HTMLElement, ressources: Record<string, string>) {
   }
 }
 
+/**
+ * Met à jour les liens vers l'index dans un élément HTML.
+ * @param el - L'élément HTML contenant les liens.
+ * @param index - Le nom du fichier index.
+ */
 function updateIndex(el: HTMLElement, index: string) {
   const els = el.querySelectorAll('a').filter((a) => (a.getAttribute('href') || '') === '/');
   els.forEach((el) => {
@@ -41,6 +60,11 @@ function updateIndex(el: HTMLElement, index: string) {
   });
 }
 
+/**
+ * Récupère les chemins des prochaines pages à archiver.
+ * @param el - L'élément HTML contenant les liens.
+ * @returns Un tableau de chemins de pages.
+ */
 function getNextPathNames(el: HTMLElement): string[] {
   return el
     .querySelectorAll('a')
@@ -49,6 +73,11 @@ function getNextPathNames(el: HTMLElement): string[] {
     .map((href) => href.slice(1));
 }
 
+/**
+ * Met à jour tous les liens dans un élément HTML.
+ * @param el - L'élément HTML contenant les liens.
+ * @param dirPath - Le chemin du répertoire de base.
+ */
 function updateAllLinks(el: HTMLElement, dirPath: string) {
   const els = el.querySelectorAll('a').filter((a) => (a.getAttribute('href') || '').startsWith('/'));
   els.forEach((el) => {
@@ -56,6 +85,15 @@ function updateAllLinks(el: HTMLElement, dirPath: string) {
   });
 }
 
+/**
+ * Exporte une page HTML en effectuant diverses transformations.
+ * @param dirPath - Le chemin du répertoire où sauvegarder le fichier HTML.
+ * @param pathName - Le chemin de la page.
+ * @param html - Le contenu HTML de la page.
+ * @param ressources - Un objet contenant les correspondances entre URLs et chemins locaux.
+ * @param index - Le nom du fichier index.
+ * @returns Un tableau de chemins des prochaines pages à archiver.
+ */
 export async function exportHTML(dirPath: string, pathName: string, html: string, ressources: Record<string, string>, index: string) {
   // 1. mount html.
   const root = parse(html);

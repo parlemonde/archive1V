@@ -7,15 +7,23 @@ import path from 'path';
 import { logger } from './logger';
 
 const s3Client = new S3Client({
+  region: 'eu-west-3',
   credentials: {
     accessKeyId: process.env.S3_ACCESS_KEY ?? '',
     secretAccessKey: process.env.S3_SECRET_KEY ?? '',
   },
 });
 
+/**
+ * Téléverse un fichier vers S3.
+ * @param filepath - Chemin du fichier dans le bucket S3.
+ * @param file - Contenu du fichier à téléverser.
+ * @param contentType - Type MIME du fichier.
+ * @throws {Error} Si une erreur survient pendant le téléversement.
+ */
 async function uploadS3File(filepath: string, file: Buffer | fs.ReadStream, contentType: string): Promise<void> {
   const command = new PutObjectCommand({
-    Bucket: process.env.S3_BUCKET_NAME,
+    Bucket: `${process.env.S3_BUCKET_NAME ?? ''}`,
     Key: filepath,
     Body: file,
     ContentType: contentType,
@@ -28,6 +36,10 @@ async function uploadS3File(filepath: string, file: Buffer | fs.ReadStream, cont
   }
 }
 
+/**
+ * Téléverse récursivement tous les fichiers d'un répertoire vers S3.
+ * @param dirPath - Chemin du répertoire local à téléverser.
+ */
 export async function upload(dirPath: string) {
   const uploadDir = async (currentPath: string) => {
     for (const name of fs.readdirSync(currentPath)) {
@@ -44,6 +56,6 @@ export async function upload(dirPath: string) {
   logger.startLoading(`Uploading archive to S3, to access it from the browser!`);
   await uploadDir(dirPath);
   logger.stopLoading();
-  const url = process.env.USE_MINIO ? `http://localhost:5000/api` : `https://1v.parlemonde.org/api`;
-  logger.success(`Archive uploaded! Available at: ${url}${dirPath.slice(12)}`);
+  const url = `${process.env.URL_TO_ARCHIVE}/archives/${dirPath.split('/').pop()}`;
+  logger.success(`Archive uploaded! Available at: ${url}`);
 }

@@ -1,5 +1,9 @@
 import type { Page } from 'puppeteer';
 
+/**
+ * Fait défiler automatiquement une page jusqu'en bas.
+ * @param page - L'objet Page de Puppeteer.
+ */
 export async function autoScroll(page: Page) {
   await page.evaluate(
     () =>

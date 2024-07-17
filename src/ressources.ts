@@ -5,10 +5,21 @@ import { v4 as uuidv4 } from 'uuid';
 
 import { logger } from './logger';
 
+/**
+ * Nettoie une URL en retirant le domaine de base et les paramètres de dimension.
+ * @param url - L'URL à nettoyer.
+ * @returns L'URL nettoyée.
+ */
 export function trimURL(url: string) {
-  return (url.startsWith('https://1v.parlemonde.org') ? url.slice(25) : url).replace(/&w=\d+&q=\d+$/, '');
+  return (url.startsWith(`${process.env.URL_TO_ARCHIVE}`) ? url.slice(25) : url).replace(/&w=\d+&q=\d+$/, '');
 }
 
+/**
+ * Obtient l'extension de fichier à partir d'une URL ou d'un type de contenu.
+ * @param url - L'URL du fichier.
+ * @param contentType - Le type de contenu MIME (optionnel).
+ * @returns L'extension du fichier ou false si non trouvée.
+ */
 export function getFileExtension(url: string, contentType?: string): string | false {
   if (contentType) {
     const maybeExtension = mime.extension(contentType);
@@ -32,6 +43,12 @@ export function getFileExtension(url: string, contentType?: string): string | fa
   }
 }
 
+/**
+ * Crée une fonction de gestion des réponses de page pour sauvegarder les ressources.
+ * @param dirPath - Le chemin du répertoire où sauvegarder les ressources.
+ * @param ressources - Un objet pour stocker les correspondances entre URLs et chemins locaux.
+ * @returns Une fonction de gestion des réponses de page.
+ */
 export const onPageResponse = (dirPath: string, ressources: Record<string, string>) => async (response: HTTPResponse) => {
   try {
     const url = response.url();
