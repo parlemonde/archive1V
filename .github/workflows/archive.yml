@@ -1,11 +1,7 @@
 name: Archive
 
 # Manual trigger
-# on: workflow_dispatch
-on:
-  create:
-    tags:
-      - '*'
+on: workflow_dispatch
 
 jobs:
   archive:
