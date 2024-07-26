@@ -20,7 +20,7 @@ const SELECTORS = {
 
 const PHASES = [1, 2, 3];
 
-async function gotoWithRetry(page: Page, url: string, maxAttempts = 3): Promise<void> {
+async function gotoWithRetry(page: Page, url: string, maxAttempts = 5): Promise<void> {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       await page.goto(url, { 
@@ -31,12 +31,12 @@ async function gotoWithRetry(page: Page, url: string, maxAttempts = 3): Promise<
     } catch (error) {
       if (attempt === maxAttempts) throw error;
       logger.info(`Navigation attempt ${attempt} failed, retrying in 30 seconds...`);
-      await sleep(30000);  // Wait 30 seconds before retrying
+      await sleep(30000); 
     }
   }
 }
 
-async function clickWithRetry(page: Page, url: string, maxAttempts = 3): Promise<void> {
+async function clickWithRetry(page: Page, url: string, maxAttempts = 5): Promise<void> {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       await page.click(url);
@@ -215,6 +215,7 @@ export async function archiveWebsite() {
     for (let i = 0; i < villageCount; i++) {
       const villageName = await selectVillage(page, i + 1);
       if (villageName == '') {
+        logger.success(`An error occurred when selecting a village !`);
         continue
       }
       logger.info(villageName);
@@ -223,6 +224,7 @@ export async function archiveWebsite() {
         await sleep(20000);
         await archivePage(dirPath, page, resources, villageName, phase)
       }
+      logger.info(`Village ${villageName} fully archived`);
     }
 
     await handleAllCssFiles(resources, dirPath);

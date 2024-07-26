@@ -10,7 +10,7 @@ const SELECTORS = {
   CONFIRM_BUTTON: 'div.MuiDialog-root button.MuiButton-containedSecondary',
 };
 
-async function gotoWithRetry(page: Page, url: string, maxAttempts = 3): Promise<void> {
+async function gotoWithRetry(page: Page, url: string, maxAttempts = 5): Promise<void> {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       await page.goto(url, { 
@@ -21,13 +21,13 @@ async function gotoWithRetry(page: Page, url: string, maxAttempts = 3): Promise<
     } catch (error) {
       if (attempt === maxAttempts) throw error;
       logger.info(`Navigation attempt ${attempt} failed, retrying in 30 seconds...`);
-      await sleep(30000);  // Wait 30 seconds before retrying
+      await sleep(30000);
     }
   }
 }
 
 
-async function waitForSelectorWithRetry(page: Page, selector: string, maxAttempts = 3): Promise<void> {
+async function waitForSelectorWithRetry(page: Page, selector: string, maxAttempts = 5): Promise<void> {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       await page.waitForSelector(selector, { visible: true, timeout: 60000 });
@@ -36,8 +36,6 @@ async function waitForSelectorWithRetry(page: Page, selector: string, maxAttempt
       if (attempt === maxAttempts) throw error;
       logger.info(`Selector ${selector} not found on attempt ${attempt}, retrying...`);
       await page.reload({ waitUntil: 'domcontentloaded' });
-      const html = await page.evaluate(() => document.documentElement.outerHTML);
-      logger.info(`ERROR ---> ${html}`);
       await sleep(30000);
     }
   }
