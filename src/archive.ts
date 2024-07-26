@@ -82,7 +82,7 @@ async function archivePage(dirPath: string, page: Page, ressources: Record<strin
      */
     if (pathName === '' && phase >= 1 && phase <= 3) {
       await sleep(4000);
-      await page.reload({ waitUntil: 'networkidle0' });
+      await page.reload({ waitUntil: 'domcontentloaded' });
       await clickWithRetry(page, `${SELECTORS.PHASE_BUTTONS}(${phase})`);
       await sleep(500);
     }
