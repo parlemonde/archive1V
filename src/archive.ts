@@ -20,6 +20,35 @@ const SELECTORS = {
 
 const PHASES = [1, 2, 3];
 
+async function gotoWithRetry(page: Page, url: string, maxAttempts = 3): Promise<void> {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      await page.goto(url, { 
+        waitUntil: 'domcontentloaded', 
+        timeout: 60000 
+      });
+      return;
+    } catch (error) {
+      if (attempt === maxAttempts) throw error;
+      logger.info(`Navigation attempt ${attempt} failed, retrying in 30 seconds...`);
+      await sleep(30000);  // Wait 30 seconds before retrying
+    }
+  }
+}
+
+async function clickWithRetry(page: Page, url: string, maxAttempts = 3): Promise<void> {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      await page.click(url);
+      return;
+    } catch (error) {
+      if (attempt === maxAttempts) throw error;
+      logger.info(`Click attempt ${attempt} failed, retrying in 30 seconds...`);
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      await sleep(30000);
+    }
+  }
+}
 
 /**
  * Archive une page spécifique du site web.
@@ -43,7 +72,7 @@ async function archivePage(dirPath: string, page: Page, ressources: Record<strin
     visitedPages[pathName] = true;
     logger.info(`Archiving ${villageName}, phase ${phase}, page: "/${pathName}"`);
     await sleep(2000);
-    await page.goto(`${process.env.URL_TO_ARCHIVE}/${pathName}`, { waitUntil: 'domcontentloaded' });
+    await gotoWithRetry(page, `${process.env.URL_TO_ARCHIVE}/${pathName}`);
     /**
      * Gère la navigation entre les différentes phases d'un village.
      * Ce bloc est exécuté uniquement pour la page d'accueil de chaque phase.
@@ -53,8 +82,8 @@ async function archivePage(dirPath: string, page: Page, ressources: Record<strin
      */
     if (pathName === '' && phase >= 1 && phase <= 3) {
       await sleep(4000);
-      await page.reload({ waitUntil: 'domcontentloaded' });
-      await page.click(`${SELECTORS.PHASE_BUTTONS}(${phase})`);
+      await page.reload({ waitUntil: 'networkidle0' });
+      await clickWithRetry(page, `${SELECTORS.PHASE_BUTTONS}(${phase})`);
       await sleep(500);
     }
     await autoScroll(page);
@@ -185,6 +214,9 @@ export async function archiveWebsite() {
     const villages: string[] = [];
     for (let i = 0; i < villageCount; i++) {
       const villageName = await selectVillage(page, i + 1);
+      if (villageName == '') {
+        continue
+      }
       logger.info(villageName);
       villages.push(villageName);
       for (const phase of PHASES) {

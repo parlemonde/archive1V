@@ -15,7 +15,7 @@ async function gotoWithRetry(page: Page, url: string, maxAttempts = 3): Promise<
     try {
       await page.goto(url, { 
         waitUntil: 'domcontentloaded', 
-        timeout: 60000  // Increased timeout to 60 seconds
+        timeout: 60000 
       });
       return;
     } catch (error) {
@@ -30,11 +30,14 @@ async function gotoWithRetry(page: Page, url: string, maxAttempts = 3): Promise<
 async function waitForSelectorWithRetry(page: Page, selector: string, maxAttempts = 3): Promise<void> {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      await page.waitForSelector(selector, { visible: true, timeout: 10000 });
+      await page.waitForSelector(selector, { visible: true, timeout: 60000 });
       return;
     } catch (error) {
       if (attempt === maxAttempts) throw error;
       logger.info(`Selector ${selector} not found on attempt ${attempt}, retrying...`);
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      const html = await page.evaluate(() => document.documentElement.outerHTML);
+      logger.info(`ERROR ---> ${html}`);
       await sleep(30000);
     }
   }
@@ -89,12 +92,13 @@ export async function selectVillage(page: Page, index: number) {
   logger.info('Selecting village');
 
   try {
-    await page.goto(`${process.env.URL_TO_ARCHIVE}`, { waitUntil: 'domcontentloaded' });
+    // await page.goto(`${process.env.URL_TO_ARCHIVE}`, { waitUntil: 'domcontentloaded' });
+    await gotoWithRetry(page, `${process.env.URL_TO_ARCHIVE}`);
     await sleep(2000);
 
     // Vérifier et cliquer sur le bouton pour ouvrir le menu déroulant
     const buttonSelector = SELECTORS.VILLAGE_BUTTON;
-    await page.waitForSelector(buttonSelector, { visible: true, timeout: 30000 });
+    await waitForSelectorWithRetry(page, buttonSelector);
     await page.click(buttonSelector);
     await sleep(10000);
     
@@ -103,7 +107,7 @@ export async function selectVillage(page: Page, index: number) {
     await page.click(SELECTORS.VILLAGE_SELECT);
     
     const selector = `${SELECTORS.VILLAGE_OPTION}:nth-child(${index})`;
-    await page.waitForSelector(selector, { timeout: 5000 });
+    await waitForSelectorWithRetry(page, selector);
     const village = await page.evaluate(({index, SELECTORS}) => {
       const $el = document.querySelector(`${SELECTORS.VILLAGE_OPTION}:nth-child(${index})`);
       if ($el) {
