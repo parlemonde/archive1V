@@ -19,6 +19,17 @@ const SELECTORS = {
 };
 
 const PHASES = [1, 2, 3];
+/**
+ * Récupère l'URL de l'archive. Ajoute le paramètre nopagination pour éviter la pagination.
+ * @param baseUrl
+ * @param pathName
+ */
+async function getArchiveUrl(baseUrl: string, pathName: string = ''): Promise<string> {
+  const url = new URL(`${baseUrl}/${pathName}`);
+  // Ajouter le paramètre nopagination
+  url.searchParams.append('nopagination', 'true');
+  return url.toString();
+}
 
 async function gotoWithRetry(page: Page, url: string, maxAttempts = 5): Promise<void> {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -72,7 +83,8 @@ async function archivePage(dirPath: string, page: Page, ressources: Record<strin
     visitedPages[pathName] = true;
     logger.info(`Archiving ${villageName}, phase ${phase}, page: "/${pathName}"`);
     await sleep(2000);
-    await gotoWithRetry(page, `${process.env.URL_TO_ARCHIVE}/${pathName}`);
+    const archiveUrl = await getArchiveUrl(process.env.URL_TO_ARCHIVE || '', pathName);
+    await gotoWithRetry(page, archiveUrl);
     /**
      * Gère la navigation entre les différentes phases d'un village.
      * Ce bloc est exécuté uniquement pour la page d'accueil de chaque phase.
