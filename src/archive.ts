@@ -26,8 +26,8 @@ const PHASES = [1, 2, 3];
  */
 async function getArchiveUrl(baseUrl: string, pathName: string = ''): Promise<string> {
   const url = new URL(`${baseUrl}/${pathName}`);
-  // Ajouter le paramètre nopagination
   url.searchParams.append('nopagination', 'true');
+  logger.info(`generated archive url: ${url.toString()}`)
   return url.toString();
 }
 
@@ -184,10 +184,11 @@ async function archivePage(dirPath: string, page: Page, ressources: Record<strin
  * Cette fonction initialise le navigateur, se connecte, et archive chaque village et phase.
  */
 export async function archiveWebsite() {
+  process.env.NEXT_PUBLIC_ARCHIVE_MODE = 'true';
   logger.infoBold('======= Archiving 1Village =======');
   logger.info(`==> YEAR : ${process.env.YEAR ?? ''}`);
   logger.info(`==> URL_TO_ARCHIVE : ${process.env.URL_TO_ARCHIVE ?? ''}`);
-  
+
   let resources: Record<string, string> = {};
   try {
     try {
