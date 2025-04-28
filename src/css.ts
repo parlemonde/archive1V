@@ -36,6 +36,21 @@ async function replaceAsync(str: string, regex: RegExp | string, asyncFn: (url: 
 }
 
 /**
+ * remove pagination styles
+ * @param css - The CSS content to clean.
+ * @returns The CSS content without pagination styles.
+ */
+function removePaginationStyles(css: string): string {
+  css = css.replace(/\.pagination\s*{[^}]*}/g, '');
+  css = css.replace(/\.pagination\s[^{]*{[^}]*}/g, '');
+  
+  css = css.replace(/\.MuiPagination[^{]*{[^}]*}/g, '');
+  css = css.replace(/\.MuiPaginationItem[^{]*{[^}]*}/g, '');
+  
+  return css;
+}
+
+/**
  * Récupère un fichier depuis une URL et le sauvegarde localement.
  * @param url - L'URL du fichier à récupérer.
  * @param dirPath - Le chemin du répertoire où sauvegarder le fichier.
@@ -84,6 +99,8 @@ async function handleCssFile(fileName: string, ressources: Record<string, string
       return false;
     }
   });
+
+  css = removePaginationStyles(css);
 
   await fs.writeFile(`archive${fileName}`, css);
 }

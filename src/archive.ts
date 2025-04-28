@@ -28,6 +28,7 @@ async function getArchiveUrl(baseUrl: string, pathName: string = ''): Promise<st
   const url = new URL(`${baseUrl}/${pathName}`);
   // Ajouter le paramètre nopagination
   url.searchParams.append('nopagination', 'true');
+  logger.info('Query parameter nopagination added , url =', url.toString());
   return url.toString();
 }
 
@@ -86,11 +87,11 @@ async function archivePage(dirPath: string, page: Page, ressources: Record<strin
     const archiveUrl = await getArchiveUrl(process.env.URL_TO_ARCHIVE || '', pathName);
     await gotoWithRetry(page, archiveUrl);
     /**
-     * Gère la navigation entre les différentes phases d'un village.
-     * Ce bloc est exécuté uniquement pour la page d'accueil de chaque phase.
+     * Handles navigation between different phases of a village.
+     * This block is executed only for the home page of each phase.
      *
-     * @param pathName - Le chemin de la page actuelle (vide pour la page d'accueil).
-     * @param phase - La phase actuelle (1, 2 ou 3).
+     * @param pathName - The current page path (empty for the home page).
+     * @param phase - The current phase (1, 2 or 3).
      */
     if (pathName === '' && phase >= 1 && phase <= 3) {
       await sleep(4000);
@@ -109,7 +110,35 @@ async function archivePage(dirPath: string, page: Page, ressources: Record<strin
       document.head.appendChild($style);
     });
 
-    // Remove world map
+    // deactivate pagination and show all activities
+    await page.evaluate(() => {
+      const paginationElements = document.querySelectorAll('.pagination, .MuiPagination-root');
+      paginationElements.forEach(element => {
+        if (element.parentNode) {
+          element.parentNode.removeChild(element);
+        }
+      });
+
+      const activities = document.querySelectorAll('.activity, [class*="activity-"], [id*="activity-"]');
+      activities.forEach(activity => {
+        if (activity instanceof HTMLElement) {
+          activity.style.display = 'block';
+          activity.style.marginBottom = '1rem';
+        }
+      });
+
+      const elementsWithDataPagination = document.querySelectorAll('[data-pagination]');
+      elementsWithDataPagination.forEach(element => {
+        element.removeAttribute('data-pagination');
+      });
+
+      // deactivate pagination scripts
+      const windowAny = window as any;
+      if (windowAny.MuiPagination) {
+        windowAny.MuiPagination = null;
+      }
+    });
+
     try {
       await page.evaluate(({SELECTORS}) => {
         const $map = document.querySelector(SELECTORS.WORLD_MAP);
@@ -122,7 +151,6 @@ async function archivePage(dirPath: string, page: Page, ressources: Record<strin
       logger.error(err);
     }
 
-    // Update index phase buttons
     try {
       await page.evaluate(({villageName, SELECTORS, PHASES}) => {
         PHASES.forEach((phase) => {
