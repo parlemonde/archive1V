@@ -1,0 +1,58 @@
+name: Archive Production
+
+# Manual trigger
+on: workflow_dispatch
+
+jobs:
+  archive-prod:
+    runs-on: ubuntu-latest
+
+    # Setup URL do archive
+    env:
+      URL_TO_ARCHIVE: ${{ vars.URL_TO_ARCHIVE_PROD }}
+
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+
+      # Setup Node JS 20
+      - name: Setup Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '20.11.1'
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      # Setup dependencies
+      - run: yarn
+
+      # Configure AWS credentials
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_PROD }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }}
+          aws-region: eu-west-3
+
+      # Setup Year to archive
+      - name: Set YEAR variable
+        run: |
+          if [ -n "${{ github.event.client_payload.year }}" ]; then
+            echo "YEAR=${{ github.event.client_payload.year }}" >> $GITHUB_ENV
+          else
+            echo "YEAR=${{ vars.YEAR }}" >> $GITHUB_ENV
+          fi
+
+      # Archive
+      - run: yarn start
+        env:
+          ADMIN_USERNAME: ${{ secrets.ADMIN_USERNAME_PROD }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD_PROD }}
+
+      # Deploy
+      - run: yarn deploy
+        env:
+          S3_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY_ID_PROD }}
+          S3_SECRET_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }}
+          S3_BUCKET_NAME: ${{ vars.S3_BUCKET_NAME_PROD }}
