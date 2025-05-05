@@ -10,6 +10,7 @@ jobs:
     # Setup URL do archive
     env:
       URL_TO_ARCHIVE: ${{ vars.URL_TO_ARCHIVE_PROD }}
+      S3_BUCKET_NAME: ${{ vars.S3_BUCKET_NAME_PROD }}
 
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
@@ -49,6 +50,8 @@ jobs:
         env:
           ADMIN_USERNAME: ${{ secrets.ADMIN_USERNAME_PROD }}
           ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD_PROD }}
+          S3_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY_ID_PROD }}
+          S3_SECRET_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }}
 
       # Deploy
       - run: yarn deploy
