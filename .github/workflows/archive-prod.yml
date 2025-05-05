@@ -7,10 +7,14 @@ jobs:
   archive-prod:
     runs-on: ubuntu-latest
 
-    # Setup URL do archive
+    # Setup variables
     env:
       URL_TO_ARCHIVE: ${{ vars.URL_TO_ARCHIVE_PROD }}
       S3_BUCKET_NAME: ${{ vars.S3_BUCKET_NAME_PROD }}
+      ADMIN_USERNAME: ${{ secrets.ADMIN_USERNAME_PROD }}
+      ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD_PROD }}
+      S3_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY_ID_PROD }}
+      S3_SECRET_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }}
 
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
@@ -28,7 +32,7 @@ jobs:
       # Setup dependencies
       - run: yarn
 
-      # Configure AWS credentials
+      # Configure AWS credentials for S3 deployment
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
@@ -45,17 +49,8 @@ jobs:
             echo "YEAR=${{ vars.YEAR }}" >> $GITHUB_ENV
           fi
 
-      # Archive
+      # Archive - all environment variables are set at job level
       - run: yarn start
-        env:
-          ADMIN_USERNAME: ${{ secrets.ADMIN_USERNAME_PROD }}
-          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD_PROD }}
-          S3_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY_ID_PROD }}
-          S3_SECRET_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }}
 
-      # Deploy
+      # Deploy - all environment variables are set at job level
       - run: yarn deploy
-        env:
-          S3_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY_ID_PROD }}
-          S3_SECRET_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }}
-          S3_BUCKET_NAME: ${{ vars.S3_BUCKET_NAME_PROD }}
