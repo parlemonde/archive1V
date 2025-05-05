@@ -12,6 +12,10 @@
     "build": "yarn tsc -p .",
     "start": "yarn build && yarn node ./dist/app.js",
     "deploy": "yarn build && yarn node ./dist/deploy.js",
+    "start:deploy": "yarn start && yarn deploy",
+    "use:staging": "node -e \"require('fs').writeFileSync('.env', require('fs').readFileSync('.env', 'utf8').replace(/CURRENT_ENV=\\w+/, 'CURRENT_ENV=staging'))\" && echo \"Switched to STAGING environment\"",
+    "use:prod": "node -e \"require('fs').writeFileSync('.env', require('fs').readFileSync('.env', 'utf8').replace(/CURRENT_ENV=\\w+/, 'CURRENT_ENV=prod'))\" && echo \"Switched to PRODUCTION environment\"",
+    "env:check": "node -e \"console.log('Current environment:', require('fs').readFileSync('.env', 'utf8').match(/CURRENT_ENV=(\\w+)/)[1].toUpperCase())\"",
     "test": "yarn serve archive"
   },
   "devDependencies": {
