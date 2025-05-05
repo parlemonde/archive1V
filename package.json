@@ -16,7 +16,9 @@
     "use:staging": "node -e \"require('fs').writeFileSync('.env', require('fs').readFileSync('.env', 'utf8').replace(/CURRENT_ENV=\\w+/, 'CURRENT_ENV=staging'))\" && echo \"Switched to STAGING environment\"",
     "use:prod": "node -e \"require('fs').writeFileSync('.env', require('fs').readFileSync('.env', 'utf8').replace(/CURRENT_ENV=\\w+/, 'CURRENT_ENV=prod'))\" && echo \"Switched to PRODUCTION environment\"",
     "env:check": "node -e \"console.log('Current environment:', require('fs').readFileSync('.env', 'utf8').match(/CURRENT_ENV=(\\w+)/)[1].toUpperCase())\"",
-    "test": "yarn serve archive"
+    "test": "yarn serve archive",
+    "start:local": "cp -n .env.example .env 2>/dev/null || true && yarn start",
+    "create-resources": "echo '{}' > resources.json"
   },
   "devDependencies": {
     "@types/eslint-plugin-prettier": "^3.1.3",
