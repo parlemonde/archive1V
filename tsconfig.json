@@ -1,15 +1,14 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
-    "lib": ["ESNext"],
+    "target": "es2024",
+    "lib": ["es2024", "ESNext.Array", "ESNext.Collection", "ESNext.Promise", "dom"],
     "skipLibCheck": true,
     "strict": true,
     "noEmit": true,
+    "allowImportingTsExtensions": true,
     "esModuleInterop": true,
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
+    "module": "nodenext",
+    "moduleResolution": "node16",
     "incremental": false,
     "types": ["node"]
   },

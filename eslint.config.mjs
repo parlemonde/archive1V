@@ -65,6 +65,8 @@ const eslintConfig = defineConfig([
                     properties: 'always',
                 },
             ],
+            'import-x/no-named-as-default-member': 'off',
+            'import-x/extensions': ['error', 'always', { ignorePackages: true }],
             'import-x/newline-after-import': [
                 'error',
                 {
