@@ -2,6 +2,7 @@ import { rm } from 'fs/promises';
 import puppeteer from 'puppeteer';
 
 import { archiveVillage } from './archive-village.ts';
+import { onPageResponse } from './resources.ts';
 
 try {
     process.loadEnvFile();
@@ -29,6 +30,10 @@ async function main() {
         await page.click('button[type="submit"]');
         await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 5000 });
 
+        // Intercept resources
+        const resources: Record<string, string> = {};
+        page.on('response', onPageResponse('dist', resources));
+
         // Get villages
         await page.goto('https://1v.parlemonde.org/api/villages');
         await page.content();
@@ -43,6 +48,7 @@ async function main() {
                 page,
                 villageId: village.id,
                 villageName: village.name,
+                resources,
             });
         }
     } catch (error) {

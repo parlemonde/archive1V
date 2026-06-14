@@ -1,15 +1,18 @@
 import { existsSync } from 'node:fs';
-import { writeFile, mkdir } from 'node:fs/promises';
+import { mkdir } from 'node:fs/promises';
 import path from 'path';
 import type { Browser, Page } from 'puppeteer';
+
+import { exportHTML } from './html.ts';
 
 interface ArchiveVillageArgs {
     browser: Browser;
     page: Page;
     villageId: number;
     villageName: string;
+    resources: Record<string, string>;
 }
-export async function archiveVillage({ browser, page, villageId, villageName }: ArchiveVillageArgs) {
+export async function archiveVillage({ browser, page, villageId, villageName, resources }: ArchiveVillageArgs) {
     await browser.setCookie({
         domain: '1v.parlemonde.org',
         name: 'village-id',
@@ -20,6 +23,7 @@ export async function archiveVillage({ browser, page, villageId, villageName }: 
             page,
             phase,
             villageName,
+            resources,
         });
     }
 }
@@ -28,8 +32,9 @@ interface ArchiveVillagePhaseArgs {
     page: Page;
     phase: number;
     villageName: string;
+    resources: Record<string, string>;
 }
-async function archiveVillagePhase({ page, phase, villageName }: ArchiveVillagePhaseArgs) {
+async function archiveVillagePhase({ page, phase, villageName, resources }: ArchiveVillagePhaseArgs) {
     await page.evaluate(
         ({ phase }) => {
             sessionStorage.setItem('selectedPhase', `${phase}`);
@@ -41,6 +46,11 @@ async function archiveVillagePhase({ page, phase, villageName }: ArchiveVillageP
         timeout: 5000,
     });
     await autoScroll(page);
+    try {
+        await page.waitForNetworkIdle({ idleTime: 600, timeout: 10000 });
+    } catch {
+        //
+    }
 
     // Make React dynamic CSS inline for archive.
     await page.evaluate(() => {
@@ -69,7 +79,7 @@ async function archiveVillagePhase({ page, phase, villageName }: ArchiveVillageP
     if (!existsSync(filepath)) {
         await mkdir(filepath, { recursive: true });
     }
-    await writeFile(path.join(filepath, filename), html);
+    await exportHTML({ filename: path.join(filepath, filename), html, resources });
 }
 
 async function autoScroll(page: Page) {
