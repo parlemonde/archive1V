@@ -8,6 +8,7 @@ module.exports = {
             files: '*.json',
             options: {
                 tabWidth: 2,
+                trailingComma: 'none',
             },
         },
     ],

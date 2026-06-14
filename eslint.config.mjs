@@ -1,34 +1,34 @@
 import eslintJS from '@eslint/js';
-import { defineConfig, globalIgnores } from 'eslint/config';
-import importPlugin from 'eslint-plugin-import';
 import eslintJson from '@eslint/json';
+import tsParser from '@typescript-eslint/parser';
+import { defineConfig, globalIgnores } from 'eslint/config';
+import { flatConfigs as importFlatConfigs } from 'eslint-plugin-import-x';
 import eslintPrettier from 'eslint-plugin-prettier/recommended';
 import eslintTS from 'typescript-eslint';
 
 const eslintConfig = defineConfig([
     {
-    ...eslintJS.configs.recommended,
-      files: ['**/*.{js,jsx,mjs}'],
+        files: ['**/*.{js,jsx,mjs}'],
+        ...eslintJS.configs.recommended,
     },
     eslintTS.configs.recommended.map((c) => ({
         files: ['**/*.{ts,tsx,mts,cts}'],
         ...c,
     })),
     {
-
-      ...importPlugin.flatConfigs.recommended,
-      files: ['**/*.{js,jsx,mjs,ts,tsx,mts,cts}'],
-  },
-  {
-          files: ['**/*.json'],
-          language: 'json/json',
-          plugins: {
-              json: eslintJson,
-          },
-          rules: {
-              'json/no-duplicate-keys': 'error',
-          },
-      },
+        files: ['**/*.{js,jsx,mjs,ts,tsx,mts,cts}'],
+        ...importFlatConfigs.recommended,
+    },
+    {
+        files: ['**/*.json'],
+        language: 'json/json',
+        plugins: {
+            json: eslintJson,
+        },
+        rules: {
+            'json/no-duplicate-keys': 'error',
+        },
+    },
     {
         files: ['**/*.{json,css,js,jsx,mjs,ts,tsx,mts,cts}'],
         ...eslintPrettier,
@@ -47,6 +47,11 @@ const eslintConfig = defineConfig([
     },
     {
         files: ['**/*.{js,jsx,mjs,ts,tsx,mts,cts}'],
+        languageOptions: {
+            parser: tsParser,
+            ecmaVersion: 'latest',
+            sourceType: 'module',
+        },
         rules: {
             'no-console': [
                 'error',
@@ -60,13 +65,13 @@ const eslintConfig = defineConfig([
                     properties: 'always',
                 },
             ],
-            'import/newline-after-import': [
+            'import-x/newline-after-import': [
                 'error',
                 {
                     count: 1,
                 },
             ],
-            'import/order': [
+            'import-x/order': [
                 'error',
                 {
                     groups: [
@@ -122,7 +127,7 @@ const eslintConfig = defineConfig([
             '@typescript-eslint/triple-slash-reference': 'off',
         },
     },
-    globalIgnores(['.claude/*', '.cursor/*', '.github/*', '.vscode/*', '.zed/*', 'node_modules/*', 'OLD/*']),
+    globalIgnores(['.claude/*', '.cursor/*', '.github/*', '.vscode/*', '.zed/*', 'node_modules/*', 'OLD/*', '.prettierrc.js']),
 ]);
 
 export default eslintConfig;
