@@ -1,8 +1,8 @@
+import mime from 'mime-types';
 import { randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
-import mime from 'mime-types';
 
 const BASE_URL = 'https://1v.parlemonde.org';
 
@@ -10,9 +10,7 @@ async function fetchMissingResource(fullUrl: string, dirPath: string): Promise<s
     const res = await fetch(fullUrl);
     if (!res.ok) return undefined;
 
-    const ext = mime.extension(res.headers.get('content-type')?.split(';')[0].trim() ?? '')
-        ?? fullUrl.split('.').pop()
-        ?? 'bin';
+    const ext = mime.extension(res.headers.get('content-type')?.split(';')[0].trim() ?? '') ?? fullUrl.split('.').pop() ?? 'bin';
     const filename = `${randomUUID()}.${ext}`;
     const resourceDir = path.join(dirPath, 'ressources');
     if (!existsSync(resourceDir)) {

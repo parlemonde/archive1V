@@ -56,7 +56,7 @@ const eslintConfig = defineConfig([
             'no-console': [
                 'error',
                 {
-                    allow: ['warn', 'error'],
+                    allow: ['warn', 'error', 'info'],
                 },
             ],
             camelcase: [
@@ -129,7 +129,7 @@ const eslintConfig = defineConfig([
             '@typescript-eslint/triple-slash-reference': 'off',
         },
     },
-    globalIgnores(['.claude/*', '.cursor/*', '.github/*', '.vscode/*', '.zed/*', 'node_modules/*', 'OLD/*', '.prettierrc.js']),
+    globalIgnores(['.claude/*', '.cursor/*', '.github/*', '.vscode/*', '.zed/*', 'node_modules/*', 'OLD/*', 'dist/*']),
 ]);
 
 export default eslintConfig;

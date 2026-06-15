@@ -87,13 +87,22 @@ export async function exportHTML({ html, filename, indexFileName, resources }: E
         }
     }
 
-    // Rewrite root links to point to the local index file
+    // Rewrite links
+    const activityPaths = new Set<string>();
     for (const a of root.querySelectorAll('a')) {
         const href = a.getAttribute('href');
         if (!href) continue;
         try {
             const parsed = new URL(href, 'https://1v.parlemonde.org');
-            if (parsed.pathname === '/') a.setAttribute('href', indexFileName + parsed.search);
+            if (parsed.origin !== 'https://1v.parlemonde.org') {
+                // do nothing, external URL
+            } else if (parsed.pathname.startsWith('/activite/')) {
+                // Push activity to paths to get archived.
+                activityPaths.add(parsed.toString());
+            } else {
+                // Reset url to index, it won't get archived.
+                a.setAttribute('href', indexFileName + parsed.search);
+            }
         } catch {
             // invalid URL, skip
         }
@@ -101,4 +110,6 @@ export async function exportHTML({ html, filename, indexFileName, resources }: E
 
     // Save file
     await writeFile(filename, root.outerHTML);
+
+    return [...activityPaths];
 }

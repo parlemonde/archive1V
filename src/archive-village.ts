@@ -35,6 +35,8 @@ interface ArchiveVillagePhaseArgs {
     resources: Record<string, string>;
 }
 async function archiveVillagePhase({ page, phase, villageName, resources }: ArchiveVillagePhaseArgs) {
+    const filename = `${villageName.toLowerCase().replace(/[\s-]+/g, '-')}-phase-${phase}.html`;
+    console.info(`Archiving village: ${filename}`);
     await page.evaluate(
         ({ phase }) => {
             sessionStorage.setItem('selectedPhase', `${phase}`);
@@ -74,12 +76,12 @@ async function archiveVillagePhase({ page, phase, villageName, resources }: Arch
 
     // Write to archive
     const html = await page.content();
-    const filename = `${villageName.toLowerCase().replace(/[\s-]+/g, '-')}-phase-${phase}.html`;
     const filepath = path.join('dist');
     if (!existsSync(filepath)) {
         await mkdir(filepath, { recursive: true });
     }
-    await exportHTML({ filename: path.join(filepath, filename), indexFileName: filename, html, resources });
+    const activityPaths = await exportHTML({ filename: path.join(filepath, filename), indexFileName: filename, html, resources });
+    console.info(activityPaths);
 }
 
 async function autoScroll(page: Page) {
