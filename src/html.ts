@@ -4,6 +4,7 @@ import { writeFile } from 'node:fs/promises';
 interface ExportHTMLArgs {
     html: string;
     filename: string;
+    indexFileName: string;
     resources: Record<string, string>;
 }
 
@@ -11,7 +12,7 @@ function lookup(url: string | undefined, resources: Record<string, string>): str
     return !url ? undefined : resources[url] || resources[`https://1v.parlemonde.org${url}`] || undefined;
 }
 
-export async function exportHTML({ html, filename, resources }: ExportHTMLArgs) {
+export async function exportHTML({ html, filename, indexFileName, resources }: ExportHTMLArgs) {
     const root = parse(html);
 
     // Remove scripts
@@ -83,6 +84,18 @@ export async function exportHTML({ html, filename, resources }: ExportHTMLArgs) 
         });
         if (updated !== text) {
             styleEl.textContent = updated;
+        }
+    }
+
+    // Rewrite root links to point to the local index file
+    for (const a of root.querySelectorAll('a')) {
+        const href = a.getAttribute('href');
+        if (!href) continue;
+        try {
+            const parsed = new URL(href, 'https://1v.parlemonde.org');
+            if (parsed.pathname === '/') a.setAttribute('href', indexFileName + parsed.search);
+        } catch {
+            // invalid URL, skip
         }
     }
 

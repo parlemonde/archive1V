@@ -79,7 +79,7 @@ async function archiveVillagePhase({ page, phase, villageName, resources }: Arch
     if (!existsSync(filepath)) {
         await mkdir(filepath, { recursive: true });
     }
-    await exportHTML({ filename: path.join(filepath, filename), html, resources });
+    await exportHTML({ filename: path.join(filepath, filename), indexFileName: filename, html, resources });
 }
 
 async function autoScroll(page: Page) {
