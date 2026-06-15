@@ -1,9 +1,10 @@
 import mime from 'mime-types';
 import { randomUUID } from 'node:crypto';
-import { existsSync } from 'node:fs';
-import { writeFile, mkdir } from 'node:fs/promises';
+import { writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { HTTPResponse } from 'puppeteer';
+
+import { ensureDir } from './ensure-dir.ts';
 
 function getExtension(url: string, contentType?: string, resourceType?: string): string | undefined {
     if (url.startsWith('data:')) return undefined;
@@ -64,9 +65,7 @@ export function onPageResponse(dirPath: string, resources: Record<string, string
         }
 
         try {
-            if (!existsSync(resourceDir)) {
-                await mkdir(resourceDir, { recursive: true });
-            }
+            await ensureDir(resourceDir);
             await writeFile(path.join(resourceDir, filename), buffer);
         } catch {
             console.warn('Could not write resource file:', url);

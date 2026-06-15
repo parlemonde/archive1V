@@ -42,6 +42,7 @@ async function main() {
         });
 
         // Archive each village
+        const visitedActivities = new Set<string>();
         for (const village of villages.slice(0, 1)) {
             await archiveVillage({
                 browser,
@@ -49,6 +50,7 @@ async function main() {
                 villageId: village.id,
                 villageName: village.name,
                 resources,
+                visitedActivities,
             });
         }
     } catch (error) {

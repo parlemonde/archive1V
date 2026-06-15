@@ -98,10 +98,18 @@ export async function exportHTML({ html, filename, indexFileName, resources }: E
                 // do nothing, external URL
             } else if (parsed.pathname.startsWith('/activite/')) {
                 // Push activity to paths to get archived.
-                activityPaths.add(parsed.toString());
+                const activityPath = parsed.toString();
+                const filename = getActivityFileName(activityPath);
+                if (filename) {
+                    activityPaths.add(activityPath);
+                    a.setAttribute('href', `/activite/${filename}`);
+                } else {
+                    a.setAttribute('href', indexFileName);
+                }
             } else {
                 // Reset url to index, it won't get archived.
-                a.setAttribute('href', indexFileName + parsed.search);
+                const isRootPath = !parsed.pathname || parsed.pathname === '/';
+                a.setAttribute('href', isRootPath ? indexFileName + parsed.search : indexFileName);
             }
         } catch {
             // invalid URL, skip
@@ -112,4 +120,20 @@ export async function exportHTML({ html, filename, indexFileName, resources }: E
     await writeFile(filename, root.outerHTML);
 
     return [...activityPaths];
+}
+
+export function getActivityFileName(activityPath: string): string | undefined {
+    try {
+        const url = new URL(activityPath, 'https://1v.parlemonde.org');
+        const segments = url.pathname.split('/').filter(Boolean);
+        if (segments.length !== 2 || segments[0] !== 'activite') {
+            return undefined;
+        }
+        const name = segments[1].toLowerCase().replace(/[\s-]+/g, '-');
+        const query = url.searchParams.toString();
+        return query ? `${name}-${query}.html` : `${name}.html`;
+    } catch {
+        // ignore
+        return undefined;
+    }
 }
