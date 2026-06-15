@@ -9,7 +9,11 @@ interface ExportHTMLArgs {
 }
 
 function lookup(url: string | undefined, resources: Record<string, string>): string | undefined {
-    return !url ? undefined : resources[url] || resources[`https://1v.parlemonde.org${url}`] || undefined;
+    if (!url) {
+        return undefined;
+    }
+    const local = resources[url] || resources[`https://1v.parlemonde.org${url}`];
+    return local ? `/${local}` : '';
 }
 
 export async function exportHTML({ html, filename, indexFileName, resources }: ExportHTMLArgs) {
@@ -104,12 +108,12 @@ export async function exportHTML({ html, filename, indexFileName, resources }: E
                     activityPaths.add(activityPath);
                     a.setAttribute('href', `/activite/${filename}`);
                 } else {
-                    a.setAttribute('href', indexFileName);
+                    a.setAttribute('href', `/${indexFileName}`);
                 }
             } else {
                 // Reset url to index, it won't get archived.
-                const isRootPath = !parsed.pathname || parsed.pathname === '/';
-                a.setAttribute('href', isRootPath ? indexFileName + parsed.search : indexFileName);
+                const isRootPath = parsed.pathname === '/';
+                a.setAttribute('href', `/${indexFileName}${isRootPath ? parsed.search : ''}`);
             }
         } catch {
             // invalid URL, skip

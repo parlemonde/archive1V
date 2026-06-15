@@ -4,6 +4,7 @@ import { writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { HTTPResponse } from 'puppeteer';
 
+import { processCssContent } from './css.ts';
 import { ensureDir } from './ensure-dir.ts';
 
 function getExtension(url: string, contentType?: string, resourceType?: string): string | undefined {
@@ -66,7 +67,13 @@ export function onPageResponse(dirPath: string, resources: Record<string, string
 
         try {
             await ensureDir(resourceDir);
-            await writeFile(path.join(resourceDir, filename), buffer);
+            const filePath = path.join(resourceDir, filename);
+            if (ext === 'css') {
+                const processed = await processCssContent(buffer.toString(), resources, dirPath);
+                await writeFile(filePath, processed);
+            } else {
+                await writeFile(filePath, buffer);
+            }
         } catch {
             console.warn('Could not write resource file:', url);
         }
