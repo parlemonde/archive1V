@@ -14,8 +14,18 @@ export async function goToPage(page: Page, path: string) {
 
     // Make React dynamic CSS inline for archive.
     await page.evaluate(() => {
-        const css = [...document.styleSheets].map((s) => [...s.cssRules].map((r) => r.cssText).join('')).join('');
-        document.head.appendChild(Object.assign(document.createElement('style'), { innerText: css }));
+        let css = '';
+        const sheets = Array.from(document.styleSheets);
+        for (const sheet of sheets) {
+            if (sheet.href) continue; // skip external sheets
+            const rules = Array.from(sheet.cssRules || []);
+            for (const rule of rules) {
+                css += rule.cssText + '\n';
+            }
+        }
+        const style = document.createElement('style');
+        style.textContent = css;
+        document.head.appendChild(style);
     });
 
     // Remove noisy dom elements
@@ -28,8 +38,12 @@ export async function goToPage(page: Page, path: string) {
         };
         // World map
         removeEl('#__next > div > div:nth-child(3) > div:nth-child(2) > div.app-content__card.with-shadow > div:nth-child(1)');
-        // Mobile view
-        removeEl('#__next > div > div:nth-child(2)');
+        removeEl(
+            '#__next > div > div.MuiGrid-root.MuiGrid-container.css-56fkn9 > div.app-content__card.with-shadow.MuiBox-root.css-126319q > div:nth-child(1)',
+        );
+        removeEl(
+            '#__next > div > div.MuiGrid-root.MuiGrid-container.css-zasq5b > div.MuiGrid-root.MuiGrid-item.MuiGrid-grid-md-4.MuiGrid-grid-lg-3.MuiGrid-grid-xl-2.css-1jpce7l > aside > div.MuiBox-root.css-1y9pn73 > div:nth-child(3)',
+        );
     });
 }
 
