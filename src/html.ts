@@ -120,6 +120,32 @@ export async function exportHTML({ html, filename, baseUrl, indexFileName, resou
         }
     }
 
+    // Update phase links
+    for (const node of root.querySelectorAll('.MuiBox-root.css-bisved')) {
+        if (node.children.length === 3) {
+            for (const [index, child] of Object.entries(node.children)) {
+                const childIndex = Number(index);
+                const a = parse('<a></a>').querySelector('a')!;
+                a.setAttribute('href', `${baseUrl}/${indexFileName.replace(/phase-\d+/, `phase-${childIndex + 1}`)}`);
+                a.innerHTML = child.innerHTML;
+                a.setAttribute('class', child.getAttribute('class') ?? '');
+                a.setAttribute('style', child.getAttribute('style') ?? '');
+                child.replaceWith(a);
+            }
+        }
+    }
+
+    // Update change village
+    const villageButton = root.querySelector('#__next > div > header > div > div.header__user > div.MuiBox-root.css-13tqxrv > div > div > button');
+    if (villageButton) {
+        const a = parse('<a></a>').querySelector('a')!;
+        a.setAttribute('href', `${baseUrl}`);
+        a.innerHTML = villageButton.innerHTML;
+        a.setAttribute('class', villageButton.getAttribute('class') ?? '');
+        a.setAttribute('style', villageButton.getAttribute('style') ?? '');
+        villageButton.replaceWith(a);
+    }
+
     // Save file
     await writeFile(filename, root.outerHTML);
 
