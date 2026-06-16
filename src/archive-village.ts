@@ -2,7 +2,6 @@ import path from 'node:path';
 import type { Browser, Page } from 'puppeteer';
 
 import { archiveActivity } from './archive-activity.ts';
-import { ensureDir } from './ensure-dir.ts';
 import { goToPage } from './go-to-page.ts';
 import { exportHTML } from './html.ts';
 
@@ -13,8 +12,19 @@ interface ArchiveVillageArgs {
     villageName: string;
     resources: Record<string, string>;
     visitedActivities: Set<string>;
+    baseDir: string;
+    schoolYear: string;
 }
-export async function archiveVillage({ browser, page, villageId, villageName, resources, visitedActivities }: ArchiveVillageArgs) {
+export async function archiveVillage({
+    browser,
+    page,
+    villageId,
+    villageName,
+    resources,
+    visitedActivities,
+    baseDir,
+    schoolYear,
+}: ArchiveVillageArgs) {
     await browser.setCookie({
         domain: '1v.parlemonde.org',
         name: 'village-id',
@@ -27,6 +37,8 @@ export async function archiveVillage({ browser, page, villageId, villageName, re
             villageName,
             resources,
             visitedActivities,
+            baseDir,
+            schoolYear,
         });
     }
 }
@@ -37,8 +49,10 @@ interface ArchiveVillagePhaseArgs {
     villageName: string;
     resources: Record<string, string>;
     visitedActivities: Set<string>;
+    baseDir: string;
+    schoolYear: string;
 }
-async function archiveVillagePhase({ page, phase, villageName, resources, visitedActivities }: ArchiveVillagePhaseArgs) {
+async function archiveVillagePhase({ page, phase, villageName, resources, visitedActivities, baseDir, schoolYear }: ArchiveVillagePhaseArgs) {
     const filename = `${villageName.toLowerCase().replace(/[\s-]+/g, '-')}-phase-${phase}.html`;
     console.info(`Archiving village: ${filename}`);
     await page.evaluate(
@@ -49,9 +63,13 @@ async function archiveVillagePhase({ page, phase, villageName, resources, visite
     );
     await goToPage(page, 'https://1v.parlemonde.org/?nopagination');
     const html = await page.content();
-    const filepath = path.join('dist');
-    await ensureDir(filepath);
-    const activityPaths = await exportHTML({ filename: path.join(filepath, filename), indexFileName: filename, html, resources });
+    const activityPaths = await exportHTML({
+        filename: path.join(baseDir, filename),
+        indexFileName: filename,
+        baseUrl: `/${schoolYear}`,
+        html,
+        resources,
+    });
     while (activityPaths.length > 0) {
         const activityPath = activityPaths.pop();
         if (!activityPath) {
@@ -66,6 +84,8 @@ async function archiveVillagePhase({ page, phase, villageName, resources, visite
                 page,
                 activityPath,
                 resources,
+                baseDir,
+                schoolYear,
                 indexFileName: filename,
             })),
         );

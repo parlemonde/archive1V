@@ -36,7 +36,7 @@ function getExtension(url: string, contentType?: string, resourceType?: string):
     return undefined;
 }
 
-export function onPageResponse(dirPath: string, resources: Record<string, string>) {
+export function onPageResponse(dirPath: string, resources: Record<string, string>, schoolYear: string) {
     return async (response: HTTPResponse): Promise<void> => {
         const url = response.url().trim();
         if (url.startsWith('data:')) return;
@@ -50,7 +50,7 @@ export function onPageResponse(dirPath: string, resources: Record<string, string
 
         const filename = `${randomUUID()}.${ext}`;
         const resourceDir = path.join(dirPath, 'ressources');
-        resources[url] = path.relative(dirPath, path.join(resourceDir, filename));
+        resources[url] = path.join(`/${schoolYear}`, 'ressources', filename);
 
         let buffer: Buffer;
         try {
@@ -69,7 +69,7 @@ export function onPageResponse(dirPath: string, resources: Record<string, string
             await ensureDir(resourceDir);
             const filePath = path.join(resourceDir, filename);
             if (ext === 'css') {
-                const processed = await processCssContent(buffer.toString(), resources, dirPath);
+                const processed = await processCssContent(buffer.toString(), resources, dirPath, schoolYear);
                 await writeFile(filePath, processed);
             } else {
                 await writeFile(filePath, buffer);

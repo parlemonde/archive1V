@@ -10,9 +10,11 @@ interface ArchiveActivityArgs {
     activityPath: string;
     resources: Record<string, string>;
     indexFileName: string;
+    baseDir: string;
+    schoolYear: string;
 }
 
-export async function archiveActivity({ page, activityPath, indexFileName, resources }: ArchiveActivityArgs): Promise<string[]> {
+export async function archiveActivity({ page, activityPath, indexFileName, resources, baseDir, schoolYear }: ArchiveActivityArgs): Promise<string[]> {
     const filename = getActivityFileName(activityPath);
     if (!filename) {
         return [];
@@ -20,7 +22,7 @@ export async function archiveActivity({ page, activityPath, indexFileName, resou
     console.info(`Archiving activity: ${filename}`);
     await goToPage(page, activityPath);
     const html = await page.content();
-    const filepath = path.join('dist', 'activite');
+    const filepath = path.join(baseDir, 'activite');
     await ensureDir(filepath);
-    return await exportHTML({ filename: path.join(filepath, filename), indexFileName, html, resources });
+    return await exportHTML({ filename: path.join(filepath, filename), indexFileName, baseUrl: `/${schoolYear}`, html, resources });
 }

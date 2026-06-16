@@ -16,12 +16,12 @@ async function fetchMissingResource(fullUrl: string, dirPath: string): Promise<s
     const resourceDir = path.join(dirPath, 'ressources');
     await ensureDir(resourceDir);
     const buffer = Buffer.from(await res.arrayBuffer());
-    const relativePath = path.relative(dirPath, path.join(resourceDir, filename));
+    const relativePath = path.join('/ressources', filename);
     await writeFile(path.join(resourceDir, filename), buffer);
     return relativePath;
 }
 
-export async function processCssContent(css: string, resources: Record<string, string>, dirPath: string): Promise<string> {
+export async function processCssContent(css: string, resources: Record<string, string>, dirPath: string, schoolYear: string): Promise<string> {
     // Find all unique URLs referenced in CSS that aren't in the resources map
     const missing = new Set<string>();
     for (const [, urlPath] of css.matchAll(/url\(["']?(\/[^)"']+)["']?\)/g)) {
@@ -33,7 +33,7 @@ export async function processCssContent(css: string, resources: Record<string, s
     await Promise.allSettled(
         [...missing].map((url) =>
             fetchMissingResource(url, dirPath).then((local) => {
-                if (local) resources[url] = local;
+                if (local) resources[url] = path.join(`/${schoolYear}`, local);
             }),
         ),
     );
@@ -41,6 +41,6 @@ export async function processCssContent(css: string, resources: Record<string, s
     // Replace all url() references with local paths
     return css.replace(/url\(["']?(\/[^)"']+)["']?\)/g, (_match, urlPath) => {
         const local = resources[BASE_URL + urlPath];
-        return local ? `url('/${local}')` : _match;
+        return local ? `url('${local}')` : _match;
     });
 }

@@ -4,6 +4,7 @@ import { writeFile } from 'node:fs/promises';
 interface ExportHTMLArgs {
     html: string;
     filename: string;
+    baseUrl: string;
     indexFileName: string;
     resources: Record<string, string>;
 }
@@ -12,11 +13,10 @@ function lookup(url: string | undefined, resources: Record<string, string>): str
     if (!url) {
         return undefined;
     }
-    const local = resources[url] || resources[`https://1v.parlemonde.org${url}`];
-    return local ? `/${local}` : '';
+    return resources[url] || resources[`https://1v.parlemonde.org${url}`];
 }
 
-export async function exportHTML({ html, filename, indexFileName, resources }: ExportHTMLArgs) {
+export async function exportHTML({ html, filename, baseUrl, indexFileName, resources }: ExportHTMLArgs) {
     const root = parse(html);
 
     // Remove scripts
@@ -106,14 +106,14 @@ export async function exportHTML({ html, filename, indexFileName, resources }: E
                 const filename = getActivityFileName(activityPath);
                 if (filename) {
                     activityPaths.add(activityPath);
-                    a.setAttribute('href', `/activite/${filename}`);
+                    a.setAttribute('href', `${baseUrl}/activite/${filename}`);
                 } else {
-                    a.setAttribute('href', `/${indexFileName}`);
+                    a.setAttribute('href', `${baseUrl}/${indexFileName}`);
                 }
             } else {
                 // Reset url to index, it won't get archived.
                 const isRootPath = parsed.pathname === '/';
-                a.setAttribute('href', `/${indexFileName}${isRootPath ? parsed.search : ''}`);
+                a.setAttribute('href', `${baseUrl}/${indexFileName}${isRootPath ? parsed.search : ''}`);
             }
         } catch {
             // invalid URL, skip

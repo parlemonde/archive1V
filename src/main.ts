@@ -1,7 +1,10 @@
 import { rm } from 'fs/promises';
+import path, { dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import puppeteer from 'puppeteer';
 
 import { archiveVillage } from './archive-village.ts';
+import { ensureDir } from './ensure-dir.ts';
 import { onPageResponse } from './resources.ts';
 
 try {
@@ -11,10 +14,19 @@ try {
 }
 
 async function main() {
-    await rm('dist', {
+    const today = new Date();
+    const month = today.getMonth() + 1; // 1-based
+    const year = today.getFullYear();
+    const schoolYear = month >= 9 ? `${year}-${year + 1}` : `${year - 1}-${year}`;
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = dirname(__filename);
+    const baseDir = path.join(__dirname, '..', `dist/${schoolYear}`);
+    await rm(baseDir, {
         recursive: true,
         force: true,
     });
+    await ensureDir(baseDir);
+
     const browser = await puppeteer.launch({
         headless: true,
     });
@@ -32,7 +44,7 @@ async function main() {
 
         // Intercept resources
         const resources: Record<string, string> = {};
-        page.on('response', onPageResponse('dist', resources));
+        page.on('response', onPageResponse(baseDir, resources, schoolYear));
 
         // Get villages
         await page.goto('https://1v.parlemonde.org/api/villages');
@@ -51,6 +63,8 @@ async function main() {
                 villageName: village.name,
                 resources,
                 visitedActivities,
+                baseDir,
+                schoolYear,
             });
         }
     } catch (error) {
