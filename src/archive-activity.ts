@@ -1,9 +1,11 @@
+import { existsSync } from 'node:fs';
 import path from 'node:path';
 import type { Page } from 'puppeteer';
 
 import { ensureDir } from './ensure-dir.ts';
 import { goToPage } from './go-to-page.ts';
 import { exportHTML, getActivityFileName } from './html.ts';
+import { getActivityPathsFromArchived } from './read-archived.ts';
 
 interface ArchiveActivityArgs {
     page: Page;
@@ -19,10 +21,14 @@ export async function archiveActivity({ page, activityPath, indexFileName, resou
     if (!filename) {
         return [];
     }
+    const filepath = path.join(baseDir, 'activite');
+    const fullPath = path.join(filepath, filename);
+    if (existsSync(fullPath)) {
+        return await getActivityPathsFromArchived(fullPath);
+    }
     console.info(`Archiving activity: ${filename}`);
+    await ensureDir(filepath);
     await goToPage(page, activityPath);
     const html = await page.content();
-    const filepath = path.join(baseDir, 'activite');
-    await ensureDir(filepath);
-    return await exportHTML({ filename: path.join(filepath, filename), indexFileName, baseUrl: `/${schoolYear}`, html, resources });
+    return await exportHTML({ filename: fullPath, indexFileName, baseUrl: `/${schoolYear}`, html, resources });
 }

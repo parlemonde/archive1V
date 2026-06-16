@@ -1,4 +1,5 @@
-import { rm } from 'fs/promises';
+import { writeFileSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import path, { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import puppeteer from 'puppeteer';
@@ -14,20 +15,24 @@ try {
     // Ok to fail
 }
 
-async function main() {
-    const today = new Date();
-    const month = today.getMonth() + 1; // 1-based
-    const year = today.getFullYear();
-    const schoolYear = month >= 9 ? `${year}-${year + 1}` : `${year - 1}-${year}`;
-    const __filename = fileURLToPath(import.meta.url);
-    const __dirname = dirname(__filename);
-    const baseDir = path.join(__dirname, '..', `dist/${schoolYear}`);
-    await rm(baseDir, {
-        recursive: true,
-        force: true,
-    });
-    await ensureDir(baseDir);
+const today = new Date();
+const month = today.getMonth() + 1; // 1-based
+const year = today.getFullYear();
+const schoolYear = month >= 9 ? `${year}-${year + 1}` : `${year - 1}-${year}`;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const baseDir = path.join(__dirname, '..', `dist/${schoolYear}`);
+await ensureDir(baseDir);
 
+let resources: Record<string, string> = {};
+try {
+    const raw = await readFile(path.join(baseDir, 'ressources.json'), 'utf-8');
+    resources = JSON.parse(raw);
+} catch {
+    // fresh start
+}
+
+async function main() {
     const browser = await puppeteer.launch({
         headless: true,
     });
@@ -44,7 +49,6 @@ async function main() {
         await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 5000 });
 
         // Intercept resources
-        const resources: Record<string, string> = {};
         page.on('response', onPageResponse(baseDir, resources, schoolYear));
 
         // Get villages
@@ -81,5 +85,12 @@ async function main() {
 
     await browser.close();
 }
+
+function exitHandler() {
+    writeFileSync(path.join(baseDir, 'ressources.json'), JSON.stringify(resources));
+}
+process.on('exit', exitHandler);
+process.on('SIGINT', exitHandler);
+process.on('uncaughtException', exitHandler);
 
 main().catch(console.error);

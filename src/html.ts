@@ -106,6 +106,7 @@ export async function exportHTML({ html, filename, baseUrl, indexFileName, resou
                 const filename = getActivityFileName(activityPath);
                 if (filename) {
                     activityPaths.add(activityPath);
+                    a.setAttribute('data-original-href', activityPath);
                     a.setAttribute('href', `${baseUrl}/activite/${filename}`);
                 } else {
                     a.setAttribute('href', `${baseUrl}/${indexFileName}`);
