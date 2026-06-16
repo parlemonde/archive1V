@@ -44,6 +44,9 @@ export async function goToPage(page: Page, path: string) {
         removeEl(
             '#__next > div > div.MuiGrid-root.MuiGrid-container.css-zasq5b > div.MuiGrid-root.MuiGrid-item.MuiGrid-grid-md-4.MuiGrid-grid-lg-3.MuiGrid-grid-xl-2.css-1jpce7l > aside > div.MuiBox-root.css-1y9pn73 > div:nth-child(3)',
         );
+        removeEl(
+            '#__next > div > div.MuiGrid-root.MuiGrid-container.css-56fkn9 > div.MuiGrid-root.MuiGrid-item.MuiGrid-grid-xs-12.MuiGrid-grid-md-4.MuiGrid-grid-lg-3.MuiGrid-grid-xl-2.css-wkbgtj > aside > div.MuiBox-root.css-1y9pn73 > div:nth-child(3)',
+        );
     });
 }
 
