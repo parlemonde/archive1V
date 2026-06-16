@@ -5,6 +5,7 @@ import puppeteer from 'puppeteer';
 
 import { archiveVillage } from './archive-village.ts';
 import { ensureDir } from './ensure-dir.ts';
+import { generateIndex } from './generateIndex.ts';
 import { onPageResponse } from './resources.ts';
 
 try {
@@ -67,6 +68,13 @@ async function main() {
                 schoolYear,
             });
         }
+
+        // Generate index
+        await generateIndex(
+            villages.map((v) => v.name),
+            schoolYear,
+            baseDir,
+        );
     } catch (error) {
         console.error(error);
     }
