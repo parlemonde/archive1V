@@ -1,122 +1,55 @@
-# 1Village archive helper
+# archive1V
 
-This is a NodeJS tool to archive 1Village activities.
-All the details are explained in the wiki : https://github.com/parlemonde/archive1V/wiki
+Scrapes and archives the [1Village](https://1v.parlemonde.org) web app into a static, offline-browsable HTML site. Uses Puppeteer (headless Chrome) to log in, crawl villages/activities, download all resources (CSS, images, fonts, media), and rewrite URLs to local paths.
 
-## Configuration
+## Usage
 
-### Variables d'environnement requises
-
-Pour fonctionner correctement, l'application nécessite les variables d'environnement suivantes :
-
-```
-# Configuration de l'environnement
-CURRENT_ENV=staging    # ou 'prod' pour l'environnement de production
-YEAR=2023              # Année de l'archive
-
-# URL du site à archiver
-URL_TO_ARCHIVE=https://1village.io
-
-# Identifiants de connexion
-ADMIN_USERNAME=username
-ADMIN_PASSWORD=password
-
-# Configuration AWS S3
-S3_ACCESS_KEY=access_key_id
-S3_SECRET_KEY=secret_access_key
-S3_BUCKET_NAME=bucket_name
+```bash
+node src/main.ts
 ```
 
-### Fichier resources.json
+The script computes the current school year automatically (e.g. `2025-2026` for dates >= September). Output goes to `dist/{schoolYear}/` (e.g. `dist/2025-2026/`).
 
-L'application utilise un fichier `resources.json` pour stocker les ressources archivées. Ce fichier doit exister (même vide) avant de lancer l'application.
+### Environment
 
-## Exécution locale
+Create a `.env` file or set the following variables:
 
-1. **Cloner le dépôt**
+| Variable | Required | Description |
+|---|---|---|
+| `USERNAME` | yes | 1Village login email |
+| `PASSWORD` | yes | 1Village login password |
+| `AWS_S3_BUCKET` | no | S3 bucket to upload the archive to |
+| `AWS_ACCESS_KEY_ID` | if uploading | AWS access key |
+| `AWS_SECRET_ACCESS_KEY` | if uploading | AWS secret key |
+| `AWS_REGION` | no | AWS region (default: `eu-west-3`) |
+| `AWS_SESSION_TOKEN` | no | Temporary session token (e.g. from STS) |
 
-   ```bash
-   git clone https://github.com/parlemonde/archive1V.git
-   cd archive1V
-   ```
+When `AWS_S3_BUCKET` is set, the archive is uploaded to `s3://<bucket>/archives/<schoolYear>/` after scraping completes.
 
-2. **Installer les dépendances**
+## Commands
 
-   ```bash
-   yarn install
-   ```
-
-3. **Créer un fichier .env**
-
-   ```bash
-   cp .env.example .env
-   # Éditer le fichier .env avec vos informations
-   ```
-
-4. **Créer le fichier resources.json initial**
-
-   ```bash
-   yarn create-resources
-   ```
-
-5. **Lancer l'application**
-
-   ```bash
-   yarn start
-   ```
-
-   Ou utiliser la commande qui crée automatiquement les fichiers nécessaires :
-
-   ```bash
-   yarn start:local
-   ```
+```bash
+pnpm run lint       # ESLint check
+pnpm run lint:fix   # ESLint auto-fix
+pnpm run typecheck  # TypeScript type-check (no emit)
+```
 
 ## GitHub Actions
 
-L'application peut être exécutée via GitHub Actions pour l'archivage automatisé.
+The repository includes a [manual workflow](.github/workflows/archive.yml) that runs the archiver on `ubuntu-latest`. Trigger it from the **Actions** tab in GitHub. It expects the same variables as [GitHub Secrets](https://docs.github.com/en/actions/security-guides/using-secrets-in-github-actions).
 
-### Workflow Staging
+## Architecture
 
-Le workflow `archive-staging.yml` archive le site dans l'environnement de staging.
-
-### Workflow Production
-
-Le workflow `archive-prod.yml` archive le site dans l'environnement de production.
-
-### Configuration requise
-
-Dans GitHub Actions, configurez les variables et secrets suivants :
-
-#### Variables
-
-- `URL_TO_ARCHIVE_STAGING` et `URL_TO_ARCHIVE_PROD`
-- `S3_BUCKET_NAME_STAGING` et `S3_BUCKET_NAME_PROD`
-- `YEAR`
-
-#### Secrets
-
-- `ADMIN_USERNAME_STAGING` et `ADMIN_USERNAME_PROD`
-- `ADMIN_PASSWORD_STAGING` et `ADMIN_PASSWORD_PROD`
-- `AWS_ACCESS_KEY_ID_STAGING` et `AWS_ACCESS_KEY_ID_PROD`
-- `AWS_SECRET_ACCESS_KEY_STAGING` et `AWS_SECRET_ACCESS_KEY_PROD`
-
-## Dépannage
-
-### Erreur "resources.json not found"
-
-Assurez-vous que le fichier `resources.json` existe avant de lancer l'application :
-
-```bash
-yarn create-resources
-```
-
-### Problèmes avec Puppeteer
-
-Dans GitHub Actions, une configuration spéciale est nécessaire pour Puppeteer :
-
-```
-PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
-```
-
-Les workflows sont configurés pour installer Chrome automatiquement.
+| File | Responsibility |
+|---|---|
+| `src/main.ts` | Entry point. Launches Puppeteer, logs in, fetches villages, orchestrates archiving, generates index, optionally uploads to S3. |
+| `src/archive-village.ts` | Archives one village across all 3 phases. Sets `village-id` cookie, crawls pages, follows activity links depth-first. |
+| `src/archive-activity.ts` | Archives a single activity page. |
+| `src/go-to-page.ts` | Navigates to a URL, auto-scrolls for lazy content, inlines CSS, removes noisy UI elements. |
+| `src/html.ts` | Transforms scraped HTML: strips `<script>`, rewrites asset URLs to local paths, rewrites `<a>` links, updates phase/village nav. Returns discovered activity paths for crawling. |
+| `src/resources.ts` | Intercepts Puppeteer HTTP responses, saves images/fonts/media/CSS as UUID-named files in `ressources/`, processes CSS through `processCssContent`. |
+| `src/css.ts` | Processes CSS `url()` references: fetches missing resources and rewrites to local paths. |
+| `src/generateIndex.ts` | Generates `index.html` from `src/index.html` template, populating village links. |
+| `src/aws.ts` | Uploads a local directory to S3 using `aws4fetch`. |
+| `src/ensure-dir.ts` | Small helper to `mkdir -p` if a directory doesn't exist. |
+| `src/index.html` | HTML template for the archive index page. Contains `{{archiveYear}}` placeholder. |

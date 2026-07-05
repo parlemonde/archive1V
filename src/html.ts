@@ -1,197 +1,170 @@
-import fs from 'fs-extra';
-import type { HTMLElement } from 'node-html-parser';
 import { parse } from 'node-html-parser';
+import { writeFile } from 'node:fs/promises';
 
-import { logger } from './logger';
-
-/**
- * Supprime tous les scripts d'un élément HTML.
- * @param el - L'élément HTML à nettoyer.
- */
-function stripScripts(el: HTMLElement) {
-  const scripts = [...el.querySelectorAll('script'), ...el.querySelectorAll("link[as='script']")];
-  for (const script of scripts) {
-    script.parentNode.removeChild(script);
-  }
+interface ExportHTMLArgs {
+    html: string;
+    filename: string;
+    baseUrl: string;
+    indexFileName: string;
+    resources: Record<string, string>;
 }
 
-/**
- * remove all pagination elements
- * @param el - The HTML element to clean.
- */
-function removePagination(el: HTMLElement) {
-  const paginationElements = el.querySelectorAll('.pagination');
-  for (const paginationElement of paginationElements) {
-    paginationElement.parentNode.removeChild(paginationElement);
-  }
-
-  const muiPaginationElements = el.querySelectorAll('.MuiPagination-root');
-  for (const muiPaginationElement of muiPaginationElements) {
-    muiPaginationElement.parentNode.removeChild(muiPaginationElement);
-  }
-  
-  const elementWithDataPagination = el.querySelectorAll('[data-pagination]');
-  for (const element of elementWithDataPagination) {
-    element.removeAttribute('data-pagination');
-  }
-
-  const possibleHiddenItems = el.querySelectorAll('.activity');
-  for (const item of possibleHiddenItems) {
-    item.setAttribute('style', 'display: block; margin-bottom: 1rem;');
-  }
-}
-
-/**
- * Met à jour les sources des images dans un élément HTML.
- * @param el - L'élément HTML contenant les images.
- * @param ressources - Un objet contenant les correspondances entre URLs et chemins locaux.
- */
-function updateImages(el: HTMLElement, ressources: Record<string, string>) {
-  const images = el.querySelectorAll('img');
-  for (const image of images) {
-    const oldSrc = image.getAttribute('src');
-    const newSrc = oldSrc ? ressources[oldSrc.replace(/&w=\d+&q=\d+$/, '')] : null;
-    if (oldSrc && newSrc) {
-      image.setAttribute('src', newSrc);
-      image.removeAttribute('srcset');
+function lookup(url: string | undefined, resources: Record<string, string>): string | undefined {
+    if (!url) {
+        return undefined;
     }
-  }
+    return resources[url] || resources[`https://1v.parlemonde.org${url}`];
 }
 
-/**
- * Met à jour les liens CSS dans un élément HTML.
- * @param el - L'élément HTML contenant les liens CSS.
- * @param ressources - Un objet contenant les correspondances entre URLs et chemins locaux.
- */
-function updateCssLinks(el: HTMLElement, ressources: Record<string, string>) {
-  const links = [...el.querySelectorAll("link[rel='stylesheet']"), ...el.querySelectorAll("link[as='style']")];
-  for (const link of links) {
-    const oldHref = link.getAttribute('href');
-    const newHref = oldHref ? ressources[oldHref.replace(/&w=\d+&q=\d+$/, '')] : null;
-    if (oldHref && newHref) {
-      link.setAttribute('href', newHref);
+export async function exportHTML({ html, filename, baseUrl, indexFileName, resources }: ExportHTMLArgs) {
+    const root = parse(html);
+
+    // Remove scripts
+    const scripts = [...root.querySelectorAll('script'), ...root.querySelectorAll("link[as='script']")];
+    for (const script of scripts) {
+        script.parentNode.removeChild(script);
     }
-  }
-}
 
-/**
- * Met à jour les liens vers l'index dans un élément HTML.
- * @param el - L'élément HTML contenant les liens.
- * @param index - Le nom du fichier index.
- */
-function updateIndex(el: HTMLElement, index: string) {
-  const els = el.querySelectorAll('a').filter((a) => (a.getAttribute('href') || '') === '/');
-  els.forEach((el) => {
-    el.setAttribute('href', `/${index}`);
-  });
-}
+    // Replace all resource URLs with local paths
+    const elements = root.querySelectorAll('img, link, source, video, audio, [style]');
+    for (const el of elements) {
+        const tag = el.rawTagName.toLowerCase();
 
-/**
- * Récupère les chemins des prochaines pages à archiver.
- * @param el - L'élément HTML contenant les liens.
- * @returns Un tableau de chemins de pages.
- */
-function getNextPathNames(el: HTMLElement): string[] {
-  return el
-    .querySelectorAll('a')
-    .map((a) => a.getAttribute('href') || '')
-    .filter((href) => href.length > 0 && href.startsWith('/activite/'))
-    .map((href) => href.slice(1));
-}
+        if (tag === 'img' || tag === 'source' || tag === 'video' || tag === 'audio') {
+            const src = el.getAttribute('src');
+            const local = lookup(src, resources);
+            if (local) el.setAttribute('src', local);
+        }
 
-/**
- * Met à jour tous les liens dans un élément HTML.
- * @param el - L'élément HTML contenant les liens.
- * @param dirPath - Le chemin du répertoire de base.
- */
-function updateAllLinks(el: HTMLElement, dirPath: string) {
-  const els = el.querySelectorAll('a').filter((a) => (a.getAttribute('href') || '').startsWith('/'));
-  els.forEach((el) => {
-    el.setAttribute('href', `${dirPath}${el.getAttribute('href') || ''}`);
-  });
-}
-
-/**
- * Exporte une page HTML en effectuant diverses transformations.
- * @param dirPath - Le chemin du répertoire où sauvegarder le fichier HTML.
- * @param pathName - Le chemin de la page.
- * @param html - Le contenu HTML de la page.
- * @param ressources - Un objet contenant les correspondances entre URLs et chemins locaux.
- * @param index - Le nom du fichier index.
- * @returns Un tableau de chemins des prochaines pages à archiver.
- */
-export async function exportHTML(dirPath: string, pathName: string, html: string, ressources: Record<string, string>, index: string) {
-  // 1. mount html.
-  const root = parse(html);
-
-  // 2. remove all scripts tag and prefetch script links.
-  stripScripts(root);
-
-  // 3. remove pagination elements
-  removePagination(root);
-  
-  // 4. update all ressources to use local urls.
-  updateImages(root, ressources);
-  updateCssLinks(root, ressources);
-
-  // 5. update root index.
-  updateIndex(root, index);
-
-  const nextPathNames = getNextPathNames(root);
-
-  const headerButtons = root.querySelectorAll('header button');
-  if (headerButtons.length > 0) {
-    headerButtons[0].rawTagName = 'A';
-    headerButtons[0].setAttribute('href', '/');
-    headerButtons[0].setAttribute('rel', 'noreferrer');
-  }
-
-  // 6. update all links
-  updateAllLinks(root, dirPath.slice(7));
-
-  // 7. deactivate all pagination behavior
-  const head = root.querySelector('head');
-  if (head) {
-    const noPaginationScript = parse(`
-      <script>
-        // Cette fonction s'exécute au chargement de la page
-        window.addEventListener('DOMContentLoaded', function() {
-          // Afficher tous les éléments qui pourraient être cachés par la pagination
-          var activities = document.querySelectorAll('.activity, [class*="activity-"], [id*="activity-"]');
-          activities.forEach(function(activity) {
-            activity.style.display = 'block';
-            activity.style.marginBottom = '1rem';
-          });
-
-          // Supprimer les sélecteurs de nombre d'éléments par page
-          var paginationSelectors = document.querySelectorAll('[class*="pagination"], [id*="pagination"], [class*="MuiPagination"], [id*="MuiPagination"]');
-          paginationSelectors.forEach(function(element) {
-            if (element.parentNode) {
-              element.parentNode.removeChild(element);
+        if (tag === 'img' || tag === 'source') {
+            const srcset = el.getAttribute('srcset');
+            if (srcset) {
+                const updated = srcset
+                    .split(',')
+                    .map((entry) => {
+                        const [urlPart, ...rest] = entry.trim().split(/\s+/);
+                        const local = lookup(urlPart, resources);
+                        return local ? [local, ...rest].join(' ') : entry.trim();
+                    })
+                    .join(', ');
+                el.setAttribute('srcset', updated);
             }
-          });
+        }
 
-          // Remplacer toute fonction de pagination qui pourrait être chargée après
-          window.setTimeout(function() {
-            // Accès typesafe à la propriété MuiPagination
-            if (window && typeof window === 'object') {
-              var w = window;
-              if ('MuiPagination' in w) {
-                w['MuiPagination'] = null;
-              }
+        if (tag === 'link') {
+            const rel = el.getAttribute('rel');
+            if (rel === 'stylesheet' || rel === 'preload' || el.getAttribute('as') === 'style') {
+                const href = el.getAttribute('href');
+                const local = lookup(href, resources);
+                if (local) el.setAttribute('href', local);
             }
-          }, 100);
+        }
+
+        if (tag === 'video' || tag === 'audio') {
+            const poster = el.getAttribute('poster');
+            const local = lookup(poster, resources);
+            if (local) el.setAttribute('poster', local);
+        }
+
+        const style = el.getAttribute('style');
+        if (style) {
+            el.setAttribute(
+                'style',
+                style.replace(/url\(["']?(.+?)["']?\)/g, (_match, urlPath) => {
+                    const local = lookup(urlPath.trim(), resources);
+                    return local ? `url('${local}')` : _match;
+                }),
+            );
+        }
+    }
+
+    // Replace url() references inside <style> tags
+    for (const styleEl of root.querySelectorAll('style')) {
+        const text = styleEl.textContent;
+        if (!text) continue;
+        const updated = text.replace(/url\(["']?([^)"']+)["']?\)/g, (_match, urlPath) => {
+            const local = lookup(urlPath.trim(), resources);
+            return local ? `url('${local}')` : _match;
         });
-      </script>
-    `);
-    head.appendChild(noPaginationScript.childNodes[0]);
-  }
+        if (updated !== text) {
+            styleEl.textContent = updated;
+        }
+    }
 
-  try {
-    await fs.writeFile(`${dirPath}/${pathName || index}.html`, root.outerHTML);
-  } catch (e) {
-    logger.warn(`Error writing html file for pathname: ${pathName || index}`);
-  }
+    // Rewrite links
+    const activityPaths = new Set<string>();
+    for (const a of root.querySelectorAll('a')) {
+        const href = a.getAttribute('href');
+        if (!href) continue;
+        try {
+            const parsed = new URL(href, 'https://1v.parlemonde.org');
+            if (parsed.origin !== 'https://1v.parlemonde.org') {
+                // do nothing, external URL
+            } else if (parsed.pathname.startsWith('/activite/')) {
+                // Push activity to paths to get archived.
+                const activityPath = parsed.toString();
+                const filename = getActivityFileName(activityPath);
+                if (filename) {
+                    activityPaths.add(activityPath);
+                    a.setAttribute('data-original-href', activityPath);
+                    a.setAttribute('href', `${baseUrl}/activite/${filename}`);
+                } else {
+                    a.setAttribute('href', `${baseUrl}/${indexFileName}`);
+                }
+            } else {
+                // Reset url to index, it won't get archived.
+                const isRootPath = parsed.pathname === '/';
+                a.setAttribute('href', `${baseUrl}/${indexFileName}${isRootPath ? parsed.search : ''}`);
+            }
+        } catch {
+            // invalid URL, skip
+        }
+    }
 
-  return nextPathNames;
+    // Update phase links
+    for (const node of root.querySelectorAll('.MuiBox-root.css-bisved')) {
+        if (node.children.length === 3) {
+            for (const [index, child] of Object.entries(node.children)) {
+                const childIndex = Number(index);
+                const a = parse('<a></a>').querySelector('a')!;
+                a.setAttribute('href', `${baseUrl}/${indexFileName.replace(/phase-\d+/, `phase-${childIndex + 1}`)}`);
+                a.innerHTML = child.innerHTML;
+                a.setAttribute('class', child.getAttribute('class') ?? '');
+                a.setAttribute('style', child.getAttribute('style') ?? '');
+                child.replaceWith(a);
+            }
+        }
+    }
+
+    // Update change village
+    const villageButton = root.querySelector('#__next > div > header > div > div.header__user > div.MuiBox-root.css-13tqxrv > div > div > button');
+    if (villageButton) {
+        const a = parse('<a></a>').querySelector('a')!;
+        a.setAttribute('href', `${baseUrl}`);
+        a.innerHTML = villageButton.innerHTML;
+        a.setAttribute('class', villageButton.getAttribute('class') ?? '');
+        a.setAttribute('style', villageButton.getAttribute('style') ?? '');
+        villageButton.replaceWith(a);
+    }
+
+    // Save file
+    await writeFile(filename, root.outerHTML);
+
+    return [...activityPaths];
+}
+
+export function getActivityFileName(activityPath: string): string | undefined {
+    try {
+        const url = new URL(activityPath, 'https://1v.parlemonde.org');
+        const segments = url.pathname.split('/').filter(Boolean);
+        if (segments.length !== 2 || segments[0] !== 'activite') {
+            return undefined;
+        }
+        const name = segments[1].toLowerCase().replace(/[\s-]+/g, '-');
+        const query = url.searchParams.toString();
+        return query ? `${name}-${query}.html` : `${name}.html`;
+    } catch {
+        // ignore
+        return undefined;
+    }
 }

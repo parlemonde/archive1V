@@ -1,61 +1,39 @@
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-
-import fs from 'fs-extra';
+import { AwsClient } from 'aws4fetch';
 import mime from 'mime-types';
-import path from 'path';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { join, sep } from 'node:path';
 
-import { logger } from './logger';
+export async function uploadArchiveToS3(bucket: string, path: string, prefix: string): Promise<void> {
+    const accessKeyId = process.env.AWS_ACCESS_KEY_ID ?? '';
+    const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY ?? '';
+    const region = process.env.AWS_REGION ?? 'eu-west-3';
+    const sessionToken = process.env.AWS_SESSION_TOKEN;
 
-const s3Client = new S3Client({
-  region: 'eu-west-3',
-  credentials: {
-    accessKeyId: process.env.S3_ACCESS_KEY ?? '',
-    secretAccessKey: process.env.S3_SECRET_KEY ?? '',
-  },
-});
-
-/**
- * Téléverse un fichier vers S3.
- * @param filepath - Chemin du fichier dans le bucket S3.
- * @param file - Contenu du fichier à téléverser.
- * @param contentType - Type MIME du fichier.
- * @throws {Error} Si une erreur survient pendant le téléversement.
- */
-async function uploadS3File(filepath: string, file: Buffer | fs.ReadStream, contentType: string): Promise<void> {
-  const command = new PutObjectCommand({
-    Bucket: `${process.env.S3_BUCKET_NAME ?? ''}`,
-    Key: filepath,
-    Body: file,
-    ContentType: contentType,
-  });
-
-  try {
-    await s3Client.send(command);
-  } catch (err) {
-    console.error(err);
-  }
-}
-
-/**
- * Téléverse récursivement tous les fichiers d'un répertoire vers S3.
- * @param dirPath - Chemin du répertoire local à téléverser.
- */
-export async function upload(dirPath: string) {
-  const uploadDir = async (currentPath: string) => {
-    for (const name of fs.readdirSync(currentPath)) {
-      const filePath = path.join(currentPath, name);
-      const stat = fs.statSync(filePath);
-      if (stat.isFile()) {
-        await uploadS3File(filePath.slice(12), fs.readFileSync(filePath), mime.lookup(filePath) || '');
-      } else if (stat.isDirectory()) {
-        await uploadDir(filePath);
-      }
+    if (!accessKeyId || !secretAccessKey) {
+        throw new Error('AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY must be set');
     }
-  };
 
-  logger.startLoading(`Uploading archive to S3, to access it from the browser!`);
-  await uploadDir(dirPath);
-  logger.stopLoading();
-  const url = `${process.env.URL_TO_ARCHIVE}/archives/${dirPath.split('/').pop()}`;
-  logger.success(`Archive uploaded! Available at: ${url}`);
+    const client = new AwsClient({ accessKeyId, secretAccessKey, region, sessionToken, service: 's3' });
+
+    for (const entry of readdirSync(path, { recursive: true, encoding: 'utf-8' })) {
+        const fullPath = join(path, entry);
+        if (!statSync(fullPath).isFile()) continue;
+
+        const key = `${prefix}/${entry.split(sep).join('/')}`;
+        const contentType = mime.lookup(key) || 'application/octet-stream';
+        const body = readFileSync(fullPath);
+        const url = `https://${bucket}.s3.${region}.amazonaws.com/${encodeURIComponent(key)}`;
+
+        const response = await client.fetch(url, {
+            method: 'PUT',
+            body,
+            headers: { 'Content-Type': contentType },
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to upload ${key}: ${response.status} ${response.statusText}`);
+        }
+
+        console.info(`Uploaded ${key}`);
+    }
 }
