@@ -25,6 +25,7 @@ jobs:
             - name: Run archive
               run: node src/main.ts
               env:
+                  PUPPETEER_NO_SANDBOX: 'true'
                   USERNAME: ${{ secrets.USERNAME }}
                   PASSWORD: ${{ secrets.PASSWORD }}
                   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}

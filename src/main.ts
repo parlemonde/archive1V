@@ -36,6 +36,7 @@ try {
 async function main() {
     const browser = await puppeteer.launch({
         headless: true,
+        ...(process.env.PUPPETEER_NO_SANDBOX === 'true' && { args: ['--no-sandbox'] }),
     });
 
     try {
