@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import puppeteer from 'puppeteer';
 
 import { archiveVillage } from './archive-village.ts';
+import { uploadArchiveToS3 } from './aws.ts';
 import { ensureDir } from './ensure-dir.ts';
 import { generateIndex } from './generateIndex.ts';
 import { onPageResponse } from './resources.ts';
@@ -60,7 +61,7 @@ async function main() {
 
         // Archive each village
         const visitedActivities = new Set<string>();
-        for (const village of villages.slice(0, 1)) {
+        for (const village of villages) {
             await archiveVillage({
                 browser,
                 page,
@@ -79,6 +80,13 @@ async function main() {
             schoolYear,
             baseDir,
         );
+
+        // Upload to S3
+        const s3Bucket = process.env.AWS_S3_BUCKET;
+        if (s3Bucket) {
+            console.info('Uploading archive to S3…');
+            await uploadArchiveToS3(s3Bucket, baseDir, `archives/${schoolYear}`);
+        }
     } catch (error) {
         console.error(error);
     }

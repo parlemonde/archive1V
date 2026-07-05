@@ -30,5 +30,5 @@ export async function archiveActivity({ page, activityPath, indexFileName, resou
     await ensureDir(filepath);
     await goToPage(page, activityPath);
     const html = await page.content();
-    return await exportHTML({ filename: fullPath, indexFileName, baseUrl: `/${schoolYear}`, html, resources });
+    return await exportHTML({ filename: fullPath, indexFileName, baseUrl: `/archives/${schoolYear}`, html, resources });
 }
