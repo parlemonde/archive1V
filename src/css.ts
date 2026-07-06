@@ -33,7 +33,7 @@ export async function processCssContent(css: string, resources: Record<string, s
     await Promise.allSettled(
         [...missing].map((url) =>
             fetchMissingResource(url, dirPath).then((local) => {
-                if (local) resources[url] = path.join(`/${schoolYear}`, local);
+                if (local) resources[url] = path.join(`/api/archives/${schoolYear}`, local);
             }),
         ),
     );

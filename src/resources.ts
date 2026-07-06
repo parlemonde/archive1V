@@ -50,7 +50,7 @@ export function onPageResponse(dirPath: string, resources: Record<string, string
 
         const filename = `${randomUUID()}.${ext}`;
         const resourceDir = path.join(dirPath, 'ressources');
-        resources[url] = path.join(`/${schoolYear}`, 'ressources', filename);
+        resources[url] = path.join(`/api/archives/${schoolYear}`, 'ressources', filename);
 
         let buffer: Buffer;
         try {
