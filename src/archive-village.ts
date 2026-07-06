@@ -74,7 +74,7 @@ async function archiveVillagePhase({ page, phase, villageName, resources, visite
             ...(await exportHTML({
                 filename: path.join(baseDir, filename),
                 indexFileName: filename,
-                baseUrl: `/archives/${schoolYear}`,
+                baseUrl: `/api/archives/${schoolYear}`,
                 html,
                 resources,
             })),

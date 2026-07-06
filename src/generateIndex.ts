@@ -8,7 +8,7 @@ export async function generateIndex(villages: string[], schoolYear: string, dirP
     const $ul = root.querySelector('#villages-list');
     if ($ul) {
         for (const village of villages) {
-            const url = `/${schoolYear}/${village.toLowerCase().replace(/[\s-]+/g, '-')}-phase-1.html`;
+            const url = `/api/archives/${schoolYear}/${village.toLowerCase().replace(/[\s-]+/g, '-')}-phase-1.html`;
             $ul.appendChild(parse(`<li><a class="text" href="${url}" rel="noreferrer">${village}</a></li>`));
         }
     }
